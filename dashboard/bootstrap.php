@@ -1,5 +1,11 @@
 <?php
 declare(strict_types=1);
+// Keep PHP session files writable and outside the public document root.
+$sessionDirectory = getenv('SKILL_EXCHANGE_SESSION_DIR') ?: __DIR__ . '/../database/sessions';
+if (!is_dir($sessionDirectory) && !mkdir($sessionDirectory, 0700, true) && !is_dir($sessionDirectory)) {
+    throw new RuntimeException('Cannot create the local session directory.');
+}
+session_save_path($sessionDirectory);
 session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Strict']);
 header('X-Content-Type-Options: nosniff');
 header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");

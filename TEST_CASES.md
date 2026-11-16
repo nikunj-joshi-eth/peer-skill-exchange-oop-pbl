@@ -1,6 +1,6 @@
 # Executed test results
 
-Run: 2026-11-16T05:37:30.750723+00:00
+Run: 2026-11-16T05:38:32.172337+00:00
 
 Environment: Windows; MinGW GCC 6.3.0; SQLite amalgamation 3.51.3; PHP executable `C:/xampp/php/php.exe`; Python standard library.
 
@@ -49,4 +49,4 @@ Not executed: interactive browser layout/accessibility review, JavaScript confir
 
 Git push results are documented separately in the final handoff.
 
-Final setup verification: `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build.ps1` completed successfully. The final C++ source compiled without diagnostics using the warning flags above; `php -l` passed for `dashboard/bootstrap.php`, `dashboard/index.php`, and `scripts/init_db.php`. `git diff --check` passed.
+Final setup checks: the documented PowerShell build script completed successfully; all three PHP syntax checks and warning-enabled C++ compilation passed. Default PHP server launch (without session configuration overrides) passed GET and persistent-CSRF POST checks with no server warnings after storing sessions in `database/sessions/`. A non-mutating unknown action was used; normal user records were unchanged.

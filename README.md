@@ -41,7 +41,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -FetchSQ
 .\build\skill_exchange.exe
 ```
 
-If `php` is already in `PATH`, replace `& 'C:\xampp\php\php.exe'` with `php`. If the extension is missing, enable `extension=pdo_sqlite` in the loaded `php.ini` (find it with `php --ini`) and restart PHP. Enable `mbstring` too if needed. The database directory must be writable.
+If `php` is already in `PATH`, replace `& 'C:\xampp\php\php.exe'` with `php`. If the extension is missing, enable `extension=pdo_sqlite` in the loaded `php.ini` (find it with `php --ini`) and restart PHP. Enable `mbstring` too if needed. The database directory must be writable. PHP session files are created automatically in ignored `database/sessions/`, outside the public directory; no XAMPP session-directory configuration is needed.
 
 For subsequent builds, omit `-FetchSQLite`. To prepare offline, extract the official `sqlite-amalgamation-3510300.zip` into `dependencies/` so that `dependencies/sqlite-amalgamation-3510300/sqlite3.c` and `sqlite3.h` exist.
 

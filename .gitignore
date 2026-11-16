@@ -28,3 +28,6 @@ dependencies/
 *.sqlite-*
 *.sqlite3-*
 
+
+# Local PHP sessions (outside the public document root)
+database/sessions/

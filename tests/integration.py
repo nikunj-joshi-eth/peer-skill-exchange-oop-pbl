@@ -52,6 +52,7 @@ def main():
         base = f'http://127.0.0.1:{port}/'
         environment = os.environ.copy()
         environment['SKILL_EXCHANGE_DB'] = str(path)
+        environment['SKILL_EXCHANGE_SESSION_DIR'] = str(directory/'sessions')
         log = open(directory / 'php.log', 'w', encoding='utf-8')
         server = subprocess.Popen([args.php, '-d', f'session.save_path={directory}', '-S', f'127.0.0.1:{port}', '-t', 'dashboard'], env=environment, stdout=log, stderr=log)
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
