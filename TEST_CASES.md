@@ -1,6 +1,6 @@
 # Executed test results
 
-Run: 2026-11-16T05:32:21.852373+00:00
+Run: 2026-11-16T05:37:30.750723+00:00
 
 Environment: Windows; MinGW GCC 6.3.0; SQLite amalgamation 3.51.3; PHP executable `C:/xampp/php/php.exe`; Python standard library.
 
@@ -48,3 +48,5 @@ Additional executed checks: milestone 1 compiled with `-std=c++11 -Wall -Wextra 
 Not executed: interactive browser layout/accessibility review, JavaScript confirmation-dialog interaction, or multi-user load testing. No browser automation tool is available in this session. Responsive CSS and confirmation code were inspected; this is not a visual test pass.
 
 Git push results are documented separately in the final handoff.
+
+Final setup verification: `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build.ps1` completed successfully. The final C++ source compiled without diagnostics using the warning flags above; `php -l` passed for `dashboard/bootstrap.php`, `dashboard/index.php`, and `scripts/init_db.php`. `git diff --check` passed.

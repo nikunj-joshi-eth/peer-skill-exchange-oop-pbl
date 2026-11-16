@@ -1,17 +1,19 @@
+-- Shared schema: keep both interfaces on this one file.
+-- IDs use the C++ signed-int range. Deletes restrict referenced history.
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS students (
- id INTEGER PRIMARY KEY CHECK(id>0), name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 200),
+ id INTEGER PRIMARY KEY CHECK(id BETWEEN 1 AND 2147483647), name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 200),
  skills_offered TEXT NOT NULL CHECK(length(trim(skills_offered)) BETWEEN 1 AND 1000),
  skills_needed TEXT NOT NULL CHECK(length(trim(skills_needed)) BETWEEN 1 AND 1000)
 );
 CREATE TABLE IF NOT EXISTS skill_listings (
- id INTEGER PRIMARY KEY CHECK(id>0), student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+ id INTEGER PRIMARY KEY CHECK(id BETWEEN 1 AND 2147483647), student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
  skill_name TEXT NOT NULL CHECK(length(trim(skill_name)) BETWEEN 1 AND 200),
  type TEXT NOT NULL CHECK(type IN ('Offer','Learn')),
  description TEXT NOT NULL CHECK(length(trim(description)) BETWEEN 1 AND 2000)
 );
 CREATE TABLE IF NOT EXISTS tutoring_sessions (
- id INTEGER PRIMARY KEY CHECK(id>0), listing_id INTEGER NOT NULL REFERENCES skill_listings(id) ON DELETE RESTRICT,
+ id INTEGER PRIMARY KEY CHECK(id BETWEEN 1 AND 2147483647), listing_id INTEGER NOT NULL REFERENCES skill_listings(id) ON DELETE RESTRICT,
  learner_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
  tutor_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
  date TEXT NOT NULL CHECK(length(date)=10 AND date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(date,1,4) BETWEEN '1900' AND '9999' AND date(date,'+0 days') IS NOT NULL AND date(date,'+0 days')=date),
