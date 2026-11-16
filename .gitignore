@@ -21,3 +21,10 @@ Release/
 # Dependencies
 node_modules/
 vendor/
+
+# Downloaded SQLite source and archives
+dependencies/
+*.db-journal
+*.sqlite-*
+*.sqlite3-*
+

@@ -5,8 +5,7 @@
 // Khushi (25/SET/BCSE/148): Skill Listings
 // Mansi (25/SET/BCSE/131): Tutoring Session Management
 // Sumit Kumar (25/SET/BCSE/145): Feedback and Learning Progress
-// Note: This baseline uses in-memory arrays (maximum 50 per module).
-// Phase 3 will add SQLite-backed persistent storage and a web dashboard.
+// Shared SQLite persistence; the original four module classes and menu are retained.
 
 #include <iostream>
 #include <string>
@@ -17,9 +16,11 @@
 #include <sstream>
 #include <cmath>
 #include <stdexcept>
+#include <vector>
+#include "database.h"
 using namespace std;
 
-const int MAX_RECORDS = 50;
+Database* database = nullptr;
 
 string readLine(const string& prompt) {
     cout << prompt;
@@ -85,6 +86,9 @@ class StudentProfile {
     int studentId = 0;
     string name, skillsOffered, skillsNeeded;
 public:
+    StudentProfile() = default;
+    explicit StudentProfile(const Row& r) : studentId(stoi(r[0])), name(r[1]), skillsOffered(r[2]), skillsNeeded(r[3]) {}
+    void save() const { database->execute("INSERT INTO students VALUES(?,?,?,?)", {to_string(studentId),name,skillsOffered,skillsNeeded}); }
     int getId() const { return studentId; }
     void input(int id) {
         studentId = id;
@@ -103,6 +107,9 @@ class SkillListing {
     int listingId = 0, studentId = 0;
     string skillName, type, description;
 public:
+    SkillListing() = default;
+    explicit SkillListing(const Row& r) : listingId(stoi(r[0])), studentId(stoi(r[1])), skillName(r[2]), type(r[3]), description(r[4]) {}
+    void save() const { database->execute("INSERT INTO skill_listings VALUES(?,?,?,?,?)", {to_string(listingId),to_string(studentId),skillName,type,description}); }
     int getId() const { return listingId; }
     int getStudentId() const { return studentId; }
     const string& getType() const { return type; }
@@ -133,7 +140,12 @@ public:
 class TutoringSession {
     int sessionId = 0, listingId = 0, learnerId = 0, tutorId = 0;
     string skill, date, time, status = "Pending";
+    double durationHours = 1;
 public:
+    TutoringSession() = default;
+    explicit TutoringSession(const Row& r) : sessionId(stoi(r[0])), listingId(stoi(r[1])), learnerId(stoi(r[2])), tutorId(stoi(r[3])), skill(r[8]), date(r[4]), time(r[5]), status(r[7]), durationHours(stod(r[6])) {}
+    double getHours() const { return durationHours; }
+    void save() const { database->execute("INSERT INTO tutoring_sessions VALUES(?,?,?,?,?,?,?,?)", {to_string(sessionId),to_string(listingId),to_string(learnerId),to_string(tutorId),date,time,to_string(durationHours),status}); }
     int getId() const { return sessionId; }
     int getLearnerId() const { return learnerId; }
     int getTutorId() const { return tutorId; }
@@ -146,13 +158,16 @@ public:
         skill = listing.getSkillName();
         do { date = readText("Date (YYYY-MM-DD): "); } while (!validDate(date));
         do { time = readText("Time (HH:MM): "); } while (!validTime(time));
+        do { durationHours = readDouble("Duration hours (0 < hours <= 24): "); } while (durationHours <= 0 || durationHours > 24);
         status = "Pending";
     }
     bool updateStatus(const string& next) {
         if (status == "Pending" && (next == "Accepted" || next == "Rejected")) {
+            database->execute("UPDATE tutoring_sessions SET status=? WHERE id=?", {next,to_string(sessionId)});
             status = next; return true;
         }
         if (status == "Accepted" && next == "Completed") {
+            database->execute("UPDATE tutoring_sessions SET status=? WHERE id=?", {next,to_string(sessionId)});
             status = next; return true;
         }
         return false;
@@ -161,38 +176,46 @@ public:
         cout << "\nSession ID: " << sessionId << "\nListing ID: " << listingId
              << "\nLearner ID: " << learnerId << "\nTutor ID: " << tutorId
              << "\nSkill: " << skill << "\nDate/Time: " << date << " " << time
-             << "\nStatus: " << status << "\n";
+             << "\nDuration hours: " << durationHours << "\nStatus: " << status << "\n";
     }
 };
 
 class FeedbackProgress {
     int sessionId = 0, studentId = 0, rating = 0;
-    double learningHours = 0;
     string comments;
 public:
+    FeedbackProgress() = default;
+    explicit FeedbackProgress(const Row& r) : sessionId(stoi(r[0])), studentId(stoi(r[1])), rating(stoi(r[2])), comments(r[3]) {}
+    void save() const { database->execute("INSERT INTO feedback VALUES(?,?,?,?)", {to_string(sessionId),to_string(studentId),to_string(rating),comments}); }
     int getSessionId() const { return sessionId; }
     int getStudentId() const { return studentId; }
     int getRating() const { return rating; }
-    double getHours() const { return learningHours; }
     void input(int session, int student) {
         sessionId = session;
         studentId = student;
         do { rating = readInt("Rating (1-5): "); } while (rating < 1 || rating > 5);
-        learningHours = readDouble("Learning hours: ");
         comments = readText("Comments: ");
     }
     void display() const {
         cout << "\nSession ID: " << sessionId << "\nLearner ID: " << studentId
-             << "\nRating: " << rating << "/5\nLearning hours: " << learningHours
+             << "\nRating: " << rating << "/5"
              << "\nComments: " << comments << "\n";
     }
 };
 
-StudentProfile students[MAX_RECORDS];
-SkillListing listings[MAX_RECORDS];
-TutoringSession sessions[MAX_RECORDS];
-FeedbackProgress feedbacks[MAX_RECORDS];
-int studentCount = 0, listingCount = 0, sessionCount = 0, feedbackCount = 0;
+vector<StudentProfile> students;
+vector<SkillListing> listings;
+vector<TutoringSession> sessions;
+vector<FeedbackProgress> feedbacks;
+int studentCount=0, listingCount=0, sessionCount=0, feedbackCount=0;
+void refresh() {
+    students.clear(); listings.clear(); sessions.clear(); feedbacks.clear();
+    for (const auto& r : database->query("SELECT * FROM students ORDER BY id")) students.emplace_back(r);
+    for (const auto& r : database->query("SELECT * FROM skill_listings ORDER BY id")) listings.emplace_back(r);
+    for (const auto& r : database->query("SELECT t.*,l.skill_name FROM tutoring_sessions t JOIN skill_listings l ON l.id=t.listing_id ORDER BY t.id")) sessions.emplace_back(r);
+    for (const auto& r : database->query("SELECT * FROM feedback ORDER BY session_id")) feedbacks.emplace_back(r);
+    studentCount=students.size(); listingCount=listings.size(); sessionCount=sessions.size(); feedbackCount=feedbacks.size();
+}
 
 int findStudent(int id) {
     for (int i = 0; i < studentCount; ++i) if (students[i].getId() == id) return i;
@@ -212,10 +235,9 @@ int findFeedbackForSession(int id) {
 }
 
 void addStudent() {
-    if (studentCount >= MAX_RECORDS) { cout << "Student limit reached.\n"; return; }
     int id = readInt("New student ID: ");
     if (id <= 0 || findStudent(id) != -1) { cout << "Invalid or duplicate student ID.\n"; return; }
-    students[studentCount++].input(id);
+    StudentProfile record; record.input(id); record.save();
     cout << "Student registered.\n";
 }
 void showStudents() {
@@ -228,12 +250,11 @@ void searchStudent() {
     else students[at].display();
 }
 void addListing() {
-    if (listingCount >= MAX_RECORDS) { cout << "Listing limit reached.\n"; return; }
     int id = readInt("New listing ID: ");
     if (id <= 0 || findListing(id) != -1) { cout << "Invalid or duplicate listing ID.\n"; return; }
     int owner = readInt("Registered student ID: ");
     if (findStudent(owner) == -1) { cout << "Register this student first.\n"; return; }
-    listings[listingCount++].input(id, owner);
+    SkillListing record; record.input(id, owner); record.save();
     cout << "Skill listing created.\n";
 }
 void showListings() {
@@ -256,7 +277,6 @@ void searchSkills() {
     if (!found) cout << "No matching skills.\n";
 }
 void addSession() {
-    if (sessionCount >= MAX_RECORDS) { cout << "Session limit reached.\n"; return; }
     int id = readInt("New session ID: ");
     if (id <= 0 || findSession(id) != -1) { cout << "Invalid or duplicate session ID.\n"; return; }
     int listingId = readInt("Listing ID to book: ");
@@ -266,7 +286,7 @@ void addSession() {
     if (findStudent(learnerId) == -1 || learnerId == listings[at].getStudentId()) {
         cout << "Learner must be registered and different from tutor.\n"; return;
     }
-    sessions[sessionCount++].input(id, listings[at], learnerId);
+    TutoringSession record; record.input(id, listings[at], learnerId); record.save();
     cout << "Session requested (Pending).\n";
 }
 void showSessions() {
@@ -283,14 +303,13 @@ void changeSessionStatus() {
     else cout << "Invalid status transition. Pending -> Accepted/Rejected; Accepted -> Completed.\n";
 }
 void addFeedback() {
-    if (feedbackCount >= MAX_RECORDS) { cout << "Feedback limit reached.\n"; return; }
     int id = readInt("Completed session ID: ");
     int at = findSession(id);
     if (at < 0 || sessions[at].getStatus() != "Completed") {
         cout << "Feedback is allowed only for completed sessions.\n"; return;
     }
     if (findFeedbackForSession(id) != -1) { cout << "Feedback already exists for this session.\n"; return; }
-    feedbacks[feedbackCount++].input(id, sessions[at].getLearnerId());
+    FeedbackProgress record; record.input(id, sessions[at].getLearnerId()); record.save();
     cout << "Feedback saved.\n";
 }
 void showFeedback() {
@@ -304,16 +323,20 @@ void showProgress() {
     double hours = 0;
     for (int i = 0; i < feedbackCount; ++i) {
         if (feedbacks[i].getStudentId() == studentId) {
-            ++count; ratings += feedbacks[i].getRating(); hours += feedbacks[i].getHours();
+            ++count; ratings += feedbacks[i].getRating(); 
         }
     }
+    int completed = 0;
+    for (const auto& session : sessions) if (session.getLearnerId() == studentId && session.getStatus() == "Completed") { ++completed; hours += session.getHours(); }
+    cout << "\nCompleted sessions: " << completed;
     cout << "\nFeedback records: " << count << "\nRecorded learning hours: " << hours;
     cout << "\nAverage rating: " << fixed << setprecision(2)
          << (count ? static_cast<double>(ratings) / count : 0.0) << "/5\n";
 }
 void showOverview() {
     double sum = 0, totalHours = 0;
-    for (int i = 0; i < feedbackCount; ++i) { sum += feedbacks[i].getRating(); totalHours += feedbacks[i].getHours(); }
+    for (int i = 0; i < feedbackCount; ++i) { sum += feedbacks[i].getRating();  }
+    for (const auto& session : sessions) if (session.getStatus() == "Completed") totalHours += session.getHours();
     cout << "\nStudents: " << studentCount << " | Listings: " << listingCount
          << " | Sessions: " << sessionCount << " | Feedback: " << feedbackCount
          << "\nAverage feedback rating: " << fixed << setprecision(2)
@@ -321,16 +344,48 @@ void showOverview() {
          << "/5 | Logged learning hours: " << totalHours << "\n";
 }
 
-int main() {
-    cout << "Peer-to-Peer Skill Exchange and Tutoring Platform - Phase 2\n";
+void editStudent() {
+    int id=readInt("Student ID: ");
+    if (findStudent(id)<0) { cout << "Student not found.\n"; return; }
+    string name=readText("Student name: "), offered=readText("Skills offered: "), needed=readText("Skills to learn: ");
+    database->execute("UPDATE students SET name=?,skills_offered=?,skills_needed=? WHERE id=?", {name,offered,needed,to_string(id)});
+    cout << "Student updated.\n";
+}
+void editListing() {
+    int id=readInt("Listing ID: ");
+    if (findListing(id)<0) { cout << "Listing not found.\n"; return; }
+    string skill=readText("Skill name: "), description=readText("Description: ");
+    database->execute("UPDATE skill_listings SET skill_name=?,description=? WHERE id=?", {skill,description,to_string(id)});
+    cout << "Listing updated.\n";
+}
+void deleteRecord() {
+    cout << "1. Student  2. Listing  3. Session  4. Feedback\n";
+    int kind=readInt("Record type: ");
+    if (kind<1 || kind>4) { cout << "Invalid record type.\n"; return; }
+    string tables[]={"students","skill_listings","tutoring_sessions","feedback"};
+    int id=readInt("ID (session ID for feedback): ");
+    string column=kind==4 ? "session_id" : "id";
+    if (database->query("SELECT * FROM "+tables[kind-1]+" WHERE "+column+"=?",{to_string(id)}).empty()) { cout << "Record not found.\n"; return; }
+    database->execute("DELETE FROM "+tables[kind-1]+" WHERE "+column+"=?",{to_string(id)});
+    cout << "Record deleted.\n";
+}
+
+int main(int argc, char* argv[]) {
+    try {
+    string path = argc > 1 ? argv[1] : "database/skill_exchange.db";
+    Database storage(path); database=&storage;
+    storage.initialize("database/schema.sql");
+    cout << "Peer-to-Peer Skill Exchange and Tutoring Platform - SDG 4\n";
     while (true) {
+        refresh();
         cout << "\n===== MAIN MENU =====\n"
              << " 1. Register student\n 2. Display students\n 3. Search student\n"
              << " 4. Create skill listing\n 5. Display listings\n 6. Filter listings\n"
              << " 7. Search skill\n 8. Request tutoring session\n 9. Display sessions\n"
              << "10. Update session status\n11. Add feedback\n12. Display feedback\n"
-             << "13. Learner progress\n14. Overview statistics\n 0. Exit\n";
+             << "13. Learner progress\n14. Overview statistics\n15. Edit student\n16. Edit listing\n17. Delete record\n 0. Exit\n";
         int option = readInt("Select: ");
+        try {
         switch (option) {
             case 1: addStudent(); break;
             case 2: showStudents(); break;
@@ -346,8 +401,13 @@ int main() {
             case 12: showFeedback(); break;
             case 13: showProgress(); break;
             case 14: showOverview(); break;
+            case 15: editStudent(); break;
+            case 16: editListing(); break;
+            case 17: deleteRecord(); break;
             case 0: cout << "Goodbye!\n"; return 0;
             default: cout << "Invalid menu choice.\n";
         }
+        } catch (const exception& error) { cout << "Operation failed: " << error.what() << "\n"; }
     }
+    } catch (const exception& error) { cerr << "Startup failed: " << error.what() << "\n"; return 1; }
 }
