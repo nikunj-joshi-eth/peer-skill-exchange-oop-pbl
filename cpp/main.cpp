@@ -14,38 +14,55 @@
 #include <iomanip>
 #include <cctype>
 #include <cstdlib>
+#include <sstream>
+#include <cmath>
+#include <stdexcept>
 using namespace std;
 
 const int MAX_RECORDS = 50;
 
+string readLine(const string& prompt) {
+    cout << prompt;
+    string value;
+    if (!getline(cin, value)) { cout << "\nInput ended.\n"; exit(0); }
+    return value;
+}
+
 int readInt(const string& prompt) {
-    int value;
     while (true) {
-        cout << prompt;
-        if (cin >> value) {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            return value;
-        }
-        if (cin.eof()) { cout << "\nInput ended.\n"; exit(0); }
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "Invalid number. Try again.\n";
+        istringstream input(readLine(prompt));
+        int value; char extra;
+        if ((input >> value) && !(input >> extra)) return value;
+        cout << "Enter a whole number without trailing text.\n";
     }
 }
 
 double readDouble(const string& prompt) {
-    double value;
     while (true) {
-        cout << prompt;
-        if (cin >> value && value >= 0 && value <= 10000) {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        istringstream input(readLine(prompt));
+        double value; char extra;
+        if ((input >> value) && !(input >> extra) && isfinite(value) && value >= 0 && value <= 10000)
             return value;
-        }
-        if (cin.eof()) { cout << "\nInput ended.\n"; exit(0); }
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "Enter a valid non-negative number.\n";
+        cout << "Enter a finite number from 0 to 10000.\n";
     }
+}
+
+bool validDate(const string& value) {
+    if (value.size() != 10 || value[4] != '-' || value[7] != '-') return false;
+    for (size_t i = 0; i < value.size(); ++i)
+        if (i != 4 && i != 7 && !isdigit(static_cast<unsigned char>(value[i]))) return false;
+    int year = stoi(value.substr(0,4)), month = stoi(value.substr(5,2)), day = stoi(value.substr(8,2));
+    int days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+    if (year < 1900 || year > 9999 || month < 1 || month > 12) return false;
+    if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) days[1] = 29;
+    return day >= 1 && day <= days[month-1];
+}
+
+bool validTime(const string& value) {
+    return value.size() == 5 && value[2] == ':' &&
+        isdigit(static_cast<unsigned char>(value[0])) && isdigit(static_cast<unsigned char>(value[1])) &&
+        isdigit(static_cast<unsigned char>(value[3])) && isdigit(static_cast<unsigned char>(value[4])) &&
+        stoi(value.substr(0,2)) < 24 && stoi(value.substr(3,2)) < 60;
 }
 
 string readText(const string& prompt) {
@@ -53,7 +70,8 @@ string readText(const string& prompt) {
     do {
         cout << prompt;
         if (!getline(cin, s)) { cout << "\nInput ended.\n"; exit(0); }
-        if (s.find_first_not_of(" \t\r\n") != string::npos) return s;
+        size_t first = s.find_first_not_of(" \t\r\n");
+        if (first != string::npos) return s.substr(first, s.find_last_not_of(" \t\r\n") - first + 1);
         cout << "This field cannot be empty.\n";
     } while (true);
 }
@@ -126,8 +144,8 @@ public:
         tutorId = listing.getStudentId();
         learnerId = learner;
         skill = listing.getSkillName();
-        date = readText("Date (YYYY-MM-DD): ");
-        time = readText("Time (HH:MM): ");
+        do { date = readText("Date (YYYY-MM-DD): "); } while (!validDate(date));
+        do { time = readText("Time (HH:MM): "); } while (!validTime(time));
         status = "Pending";
     }
     bool updateStatus(const string& next) {
