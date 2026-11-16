@@ -1,0 +1,23 @@
+# Compiled files
+*.exe
+*.o
+*.obj
+*.dll
+build/
+Debug/
+Release/
+
+# Local database files
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Environment and editor files
+.env
+.env.*
+.vscode/
+
+# Dependencies
+node_modules/
+vendor/
