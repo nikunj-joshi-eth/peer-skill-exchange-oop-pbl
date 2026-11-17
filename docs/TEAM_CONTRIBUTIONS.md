@@ -25,3 +25,5 @@ This map preserves the team's assigned responsibilities from the Phase 2 baselin
 2. Together, demonstrate registration → Offer listing → tutoring session → completion → feedback.
 3. Show that progress exists before feedback and that changes appear across the console and dashboard.
 4. Use `TEST_CASES.md` for executed evidence, and distinguish automated checks from unexecuted visual review.
+
+Use the [demonstration guide](DEMONSTRATION_GUIDE.md) for a repeatable team walkthrough. Each member should connect their class to the [OOP explanation](OOP_CONCEPTS.md), its [database rules](DATABASE_DESIGN.md), and the relevant [complexity analysis](TIME_COMPLEXITY.md). Shared integration is documented in [architecture](ARCHITECTURE.md). These are review and explanation responsibilities, not fabricated claims that a particular person authored or executed a particular change.

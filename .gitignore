@@ -17,6 +17,11 @@ Release/
 .env
 .env.*
 .vscode/
+*.pem
+*.key
+*.pfx
+__pycache__/
+*.py[cod]
 
 # Dependencies
 node_modules/
@@ -24,10 +29,7 @@ vendor/
 
 # Downloaded SQLite source and archives
 dependencies/
-*.db-journal
 *.sqlite-*
 *.sqlite3-*
-
-
 # Local PHP sessions (outside the public document root)
 database/sessions/

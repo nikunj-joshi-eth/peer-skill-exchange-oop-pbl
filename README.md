@@ -114,6 +114,12 @@ scripts/build.ps1           Pinned SQLite download and Windows build
 scripts/init_db.php         Additive database initialization
 tests/integration.py        Isolated console / HTTP / SQLite integration suite
 docs/TEAM_CONTRIBUTIONS.md   Team responsibilities and module map
+docs/ARCHITECTURE.md         Components, request lifecycles and shared storage
+docs/OOP_CONCEPTS.md         Implemented classes and actual syllabus concepts
+docs/DATABASE_DESIGN.md      Keys, relationships, rules and derived progress
+docs/TIME_COMPLEXITY.md      In-memory and database operation costs
+docs/DEMONSTRATION_GUIDE.md  Repeatable viva and screenshot checklist
+docs/LIMITATIONS.md          Supported scope and possible future work
 TEST_CASES.md               Results of tests actually executed
 ```
 
@@ -128,4 +134,29 @@ python tests/integration.py --php 'C:\xampp\php\php.exe'
 
 The integration suite starts its own PHP server on an available loopback port and gives PHP and C++ one temporary database under `build/`. It checks both directions of integration, restart persistence, editing/deletion, progress, invalid inputs, relationship/status rules, duplicate feedback, escaping, CSRF and foreign-key integrity. It removes test data and rewrites `TEST_CASES.md` with actual results. It does not touch the normal database.
 
-See [TEST_CASES.md](TEST_CASES.md) for actual integration results. Browser visual review, JavaScript confirmation interaction, and load testing have not been executed; see [TEST_CASES.md](TEST_CASES.md).
+See [TEST_CASES.md](TEST_CASES.md) for actual executed results. HTTP checks do not establish rendered layout, screen-reader behavior or JavaScript interaction. Browser visual review, confirmation interaction, and load testing remain unverified.
+
+## Academic documentation and viva
+
+Read the [architecture](docs/ARCHITECTURE.md), [actual OOP concepts](docs/OOP_CONCEPTS.md), [database design](docs/DATABASE_DESIGN.md), and [operation-wise complexity](docs/TIME_COMPLEXITY.md). The [demonstration guide](docs/DEMONSTRATION_GUIDE.md) provides one complete workflow using a newly named demonstration database, expected outcomes, rejection cases and an unchecked screenshot checklist. The [team map](docs/TEAM_CONTRIBUTIONS.md) preserves assigned responsibilities without attributing particular Git commits to individual students.
+
+Current [limitations and future scope](docs/LIMITATIONS.md) include local access without roles, no overlap detection or timezone handling, unpaginated lists, snapshot refresh rather than live updates, and additive setup rather than database migrations. This finalization adds no authentication, external framework or unrelated feature.
+
+The official university DOCX report is deferred until its template is supplied. A GitHub release is deferred until the local Windows demonstration is confirmed. Capture real application screenshots during that demonstration; no fabricated screenshots are included.
+
+## Troubleshooting
+
+| Symptom | Action |
+| --- | --- |
+| `gcc` or `g++` not found | Install MinGW GCC/G++, add its `bin` directory to PATH, open a new PowerShell window, and run `Get-Command gcc, g++`. Both compilers are needed. |
+| SQLite source missing or download failed | Run `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -FetchSQLite` with internet access. For offline setup, use the exact extraction path documented above. |
+| `could not find driver` | Run `& 'C:\xampp\php\php.exe' --ini`, enable `extension=pdo_sqlite` in that loaded PHP configuration, and restart PHP. Verify with `-m`. |
+| `mb_strlen` unavailable | Enable `extension=mbstring` in the loaded PHP configuration and restart PHP. |
+| Database cannot be opened / dashboard HTTP 503 | Run from the repository root, ensure the selected database's parent directory exists and is writable, and inspect the PHP server log. Run the initializer on the same path. Session storage also needs write access. |
+| Console and dashboard show different records | Pass the same absolute database path to C++ and PHP; restart PHP after changing its environment. Advance a console menu cycle and reload the dashboard. |
+| Port 8080 in use | Stop the existing server or start PHP on `127.0.0.1:8081`, then browse that port. |
+| Database locked | Finish the other write, close external SQLite tools/transactions and retry. Avoid simultaneous cloud-sync access to an active database. Both clients wait up to five seconds. |
+| Deletion or status change rejected | Follow the lifecycle and dependency order above. Do not disable foreign keys or triggers to make a demonstration succeed. |
+| Console text appears garbled | Use an appropriate terminal encoding; `chcp 65001` may help UTF-8 input/output. ASCII demonstration names avoid code-page differences. Unicode search remains limited. |
+
+A fresh source checkout contains no binaries, database or downloaded dependencies. The `-FetchSQLite` build creates `dependencies/` and `build/`; the initializer creates the database without sample records. Never copy an old binary into a submission as a substitute for a successful source build.
