@@ -13,6 +13,7 @@ import sqlite3
 import subprocess
 import tempfile
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -134,9 +135,34 @@ def main():
             check('Duplicate student IDs rejected in both interfaces', lambda: (post('students','student_save',False,id=101,name='Duplicate',skills_offered='x',skills_needed='x'),require('Invalid or duplicate' in console('1\n101\n0\n'))))
             check('Empty and malformed student fields rejected', lambda: (post('students','student_save',False,id=103,name=' ',skills_offered='x',skills_needed='x'),post('students','student_save',False,id='103x',name='x',skills_offered='x',skills_needed='x'),post('students','student_save',False,id=2147483648,name='x',skills_offered='x',skills_needed='x')))
             check('Profile editing, search and SQL-like input', lambda: (post('students','student_save',editing=1,id=102,name="Learner O'Neil",skills_offered='Math',skills_needed='C++'),require("Learner O&#039;Neil" in get('students','&q=O%27Neil')),require('No matching records' in get('students','&q=%27%20OR%201%3D1--'))))
+            def live_console_sync():
+                output = directory/'live-console.log'
+                with output.open('w', encoding='utf-8') as capture:
+                    process = subprocess.Popen([str(ROOT/'build/skill_exchange.exe'), str(path)], stdin=subprocess.PIPE, stdout=capture, stderr=capture, text=True)
+                    try:
+                        for _ in range(100):
+                            if 'Select:' in output.read_text(encoding='utf-8'):
+                                break
+                            require(process.poll() is None, 'Console exited before its menu')
+                            time.sleep(.05)
+                        else:
+                            raise AssertionError('Console menu not ready')
+                        post('students','student_save',editing=1,id=101,name='Live Tutor',skills_offered='C++',skills_needed='Math')
+                        # First selection completes the already-loaded cycle; second uses refreshed data.
+                        process.communicate('14\n2\n0\n', timeout=10)
+                        require(process.returncode == 0)
+                        require('Name: Live Tutor' in output.read_text(encoding='utf-8'))
+                    finally:
+                        if process.poll() is None:
+                            process.kill(); process.communicate(timeout=5)
+                post('students','student_save',editing=1,id=101,name='Tutor',skills_offered='C++',skills_needed='Math')
+            check('Running console sees PHP changes on next menu cycle', live_console_sync)
+            check('PHP rejects embedded NUL text without storing partial data', lambda: (post('students','student_save',False,id=104,name='Broken\x00name',skills_offered='x',skills_needed='x'),require(not rows('SELECT * FROM students WHERE id=104'))))
+            check('Console rejects embedded NUL text and accepts correction', lambda: (require('NUL' in console('15\n101\nBroken\x00name\nTutor\nC++\nMath\n0\n')),require(rows('SELECT name FROM students WHERE id=101') == [('Tutor',)])))
             check('C++ listing creation visible on dashboard', lambda: (require('Skill listing created' in console('4\n201\n101\nC++\nOffer\nBasics\n0\n')),require('Basics' in get('skills'))))
             check('PHP Learn listing and search/type filtering', lambda: (post('skills','skill_save',id=202,student_id=102,skill_name='Calculus',type='Learn',description='Practice'),require('Calculus' in get('skills','&type=Learn&q=Calculus')),require('No matching records' in get('skills','&type=Offer&q=Calculus'))))
             check('Invalid listing owner and type rejected', lambda: (post('skills','skill_save',False,id=203,student_id=999,skill_name='x',type='Offer',description='x'),post('skills','skill_save',False,id=203,student_id=101,skill_name='x',type='Other',description='x')))
+            check('NUL date returns form error instead of server failure', lambda: post('sessions','session_create',False,id=304,listing_id=201,learner_id=102,date='2026-11-20\x00bad',time='14:30',duration_hours=1))
             check('Session scheduling and C++ visibility', lambda: (schedule(),require('Session ID: 301' in console('9\n0\n'))))
             check('Self tutoring, missing learner and Learn bookings rejected', lambda: [post('sessions','session_create',False,id=302,listing_id=listing,learner_id=learner,date='2026-11-20',time='14:30',duration_hours=1) for listing,learner in [(201,101),(201,999),(202,101)]])
             check('Invalid date, time, duration and duplicate session rejected', lambda: [post('sessions','session_create',False,**{**dict(id=302,listing_id=201,learner_id=102,date='2026-11-20',time='14:30',duration_hours=1),**bad}) for bad in [dict(date='2026-02-30'),dict(time='24:00'),dict(duration_hours=0),dict(duration_hours=25),dict(duration_hours='nan'),dict(id=301)]])
@@ -147,6 +173,8 @@ def main():
             check('PHP feedback visible in C++; output escaping and averages', lambda: (post('feedback','feedback_save',session_id=301,rating=5,comments='<script>alert(1)</script> Helpful'),require('Helpful' in console('12\n0\n')),require('&lt;script&gt;alert(1)&lt;/script&gt;' in get('feedback')),require(rows('SELECT AVG(rating) FROM feedback')==[(5.0,)])))
             check('Duplicate feedback rejected in both interfaces', lambda: (post('feedback','feedback_save',False,session_id=301,rating=4,comments='duplicate'),require('Feedback already exists' in console('11\n301\n0\n'))))
             check('Feedback and skill editing persist', lambda: (post('feedback','feedback_save',editing=1,session_id=301,rating=4,comments='Revised review'),post('skills','skill_save',editing=1,id=201,student_id=101,skill_name='C++ foundations',type='Offer',description='Updated'),require('Revised review' in console('12\n0\n')),require('C++ foundations' in console('5\n0\n'))))
+            check('Console profile and listing edits appear in dashboard', lambda: (require('Student updated' in console('15\n102\nLearner O\'Neil\nMathematics\nC++\n0\n')),require('Mathematics' in get('students','&q=102')),require('Listing updated' in console('16\n201\nC++ foundations\nConsole revision\n0\n')),require('Console revision' in get('skills')),require('Student ID: 102' in console('3\n102\n0\n'))))
+            check('Console skill search and Offer filtering select correct records', lambda: (require('Listing ID: 201' in console('7\nfoundations\n0\n')),require('Listing ID: 202' not in console('6\nOffer\n0\n'))))
             check('Booked listing ownership/type immutable and deletion protected', lambda: (post('skills','skill_save',False,editing=1,id=201,student_id=102,skill_name='x',type='Learn',description='x'),post('skills','delete',False,table='skill_listings',id=201),post('students','delete',False,table='students',id=101)))
             check('Failed status forms do not populate create fields', lambda: require('name="id" type="number" value=""' in post('sessions','session_status',False,id=301,status='Accepted')))
             check('Validation preserves edited form values', lambda: require('value="Retained name"' in post('students','student_save',False,editing=1,id=102,name='Retained name',skills_offered='',skills_needed='C++')))

@@ -28,7 +28,7 @@ public:
             throw std::runtime_error(sqlite3_errmsg(handle));
         try {
             for (size_t i=0; i<values.size(); ++i)
-                if (sqlite3_bind_text(statement, static_cast<int>(i+1), values[i].c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK)
+                if (sqlite3_bind_text(statement, static_cast<int>(i+1), values[i].c_str(), static_cast<int>(values[i].size()), SQLITE_TRANSIENT) != SQLITE_OK)
                     throw std::runtime_error(sqlite3_errmsg(handle));
             std::vector<Row> rows;
             int result;
@@ -36,7 +36,7 @@ public:
                 Row row;
                 for (int i=0; i<sqlite3_column_count(statement); ++i) {
                     const unsigned char* value=sqlite3_column_text(statement,i);
-                    row.push_back(value ? reinterpret_cast<const char*>(value) : "");
+                    row.push_back(value ? std::string(reinterpret_cast<const char*>(value), sqlite3_column_bytes(statement,i)) : "");
                 }
                 rows.push_back(row);
             }

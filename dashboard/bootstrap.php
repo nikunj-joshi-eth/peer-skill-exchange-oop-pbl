@@ -19,7 +19,7 @@ if (!@session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Strict']))
 header('X-Content-Type-Options: nosniff');
 header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
 function h(mixed $value): string {
-    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    return htmlspecialchars(str_replace("\0", '', (string)$value), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 function db(): PDO {
     static $db;
@@ -42,14 +42,20 @@ function query(string $sql, array $values = []): array {
     $statement->execute($values);
     return $statement->fetchAll();
 }
+function fieldLabel(string $field): string {
+    return ['id'=>'Record ID','student_id'=>'Student','listing_id'=>'Offered skill','learner_id'=>'Learner',
+        'session_id'=>'Completed session','name'=>'Full name','skills_offered'=>'Skills offered',
+        'skills_needed'=>'Skills to learn','skill_name'=>'Skill name','duration_hours'=>'Duration (hours)'][$field]
+        ?? ucfirst(str_replace('_', ' ', $field));
+}
 function text(string $field, int $max = 200): string {
     $value = trim((string)($_POST[$field] ?? ''));
-    if ($value === '' || mb_strlen($value) > $max) throw new InvalidArgumentException("$field is required (maximum $max characters).");
+    if ($value === '' || mb_strlen($value) > $max) throw new InvalidArgumentException(fieldLabel($field)." is required (maximum $max characters).");
     return $value;
 }
 function number(string $field): int {
     $value = filter_var($_POST[$field] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
-    if ($value === false) throw new InvalidArgumentException("$field must be a whole number from 1 to 2147483647.");
+    if ($value === false) throw new InvalidArgumentException(fieldLabel($field)." must be a whole number from 1 to 2147483647.");
     return $value;
 }
 function exists(string $table, string $column, int $id): void {
@@ -66,7 +72,10 @@ $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
 // Mutations always require POST plus a session CSRF token, then redirect.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        foreach ($_POST as $value) if (!is_string($value)) throw new InvalidArgumentException('Form fields must contain single values.');
+        foreach ($_POST as $value) {
+            if (!is_string($value)) throw new InvalidArgumentException('Form fields must contain single values.');
+            if (str_contains($value, "\0")) throw new InvalidArgumentException('NUL characters are not allowed in form fields.');
+        }
         if (!is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) throw new InvalidArgumentException('Form expired. Reload and try again.');
         $action = (string)($_POST['action'] ?? '');
         switch ($action) {
@@ -93,8 +102,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 query('INSERT INTO tutoring_sessions VALUES(?,?,?,?,?,?,?,?)',[number('id'),$listing,number('learner_id'),$offer[0]['student_id'],$date,$time,$hours,'Pending']);
                 break;
             case 'session_status':
-                $id=number('id'); exists('tutoring_sessions','id',$id);
-                query('UPDATE tutoring_sessions SET status=? WHERE id=?',[text('status'),$id]); break;
+                $id=number('id'); $status=text('status');
+                $current=query('SELECT status FROM tutoring_sessions WHERE id=?',[$id]);
+                if (!$current) throw new InvalidArgumentException('Session not found.');
+                $allowed=['Pending'=>['Accepted','Rejected'], 'Accepted'=>['Completed']];
+                if (!in_array($status,$allowed[$current[0]['status']] ?? [],true)) {
+                    throw new InvalidArgumentException('Invalid status transition. Pending can be accepted or rejected; only accepted sessions can be completed.');
+                }
+                query('UPDATE tutoring_sessions SET status=? WHERE id=?',[$status,$id]); break;
             case 'feedback_save':
                 $session=number('session_id'); $rating=number('rating');
                 if ($rating>5) throw new InvalidArgumentException('Rating must be 1 to 5.');
@@ -138,7 +153,8 @@ function select(string $label,string $name,array $options,mixed $selected=''): v
     echo '</select></label>';
 }
 function deleteButton(string $table,int $id): void {
-    echo '<form method="post" class="inline delete-form">'; csrf(); hidden('action','delete'); hidden('table',$table); hidden('id',$id); echo '<button class="danger small" aria-label="Delete '.h($table).' record #'.$id.'">Delete</button></form>';
+    $label=['students'=>'student','skill_listings'=>'listing','tutoring_sessions'=>'session','feedback'=>'feedback for session'][$table].' #'.$id;
+    echo '<form method="post" class="inline delete-form" data-record="'.h($label).'">'; csrf(); hidden('action','delete'); hidden('table',$table); hidden('id',$id); echo '<button class="danger small" aria-label="Delete '.h($label).'">Delete</button></form>';
 }
 function badge(string $value): string { return '<span class="badge '.h(strtolower($value)).'">'.h($value).'</span>'; }
 function emptyRow(int $columns): void {

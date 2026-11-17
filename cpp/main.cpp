@@ -77,6 +77,10 @@ string readText(const string& prompt) {
     do {
         cout << prompt;
         if (!getline(cin, s)) { cout << "\nInput ended.\n"; exit(0); }
+        if (s.find('\0') != string::npos) {
+            cout << "NUL characters are not allowed. Enter the field again.\n";
+            continue;
+        }
         size_t first = s.find_first_not_of(" \t\r\n");
         if (first != string::npos) return s.substr(first, s.find_last_not_of(" \t\r\n") - first + 1);
         cout << "This field cannot be empty.\n";
@@ -168,8 +172,14 @@ public:
         tutorId = listing.getStudentId();
         learnerId = learner;
         skill = listing.getSkillName();
-        do { date = readText("Date (YYYY-MM-DD): "); } while (!validDate(date));
-        do { time = readText("Time (HH:MM): "); } while (!validTime(time));
+        do {
+            date = readText("Date (YYYY-MM-DD): ");
+            if (!validDate(date)) cout << "Enter a real date from 1900 to 9999.\n";
+        } while (!validDate(date));
+        do {
+            time = readText("Time (HH:MM): ");
+            if (!validTime(time)) cout << "Enter a time from 00:00 to 23:59.\n";
+        } while (!validTime(time));
         do { durationHours = readDouble("Duration hours (0 < hours <= 24): "); } while (durationHours <= 0 || durationHours > 24);
         status = "Pending";
     }
