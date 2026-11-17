@@ -98,7 +98,7 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <h2>Recent sessions</h2>
 <a href="?page=sessions">View all →</a>
 </div>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Recent sessions: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>
@@ -121,6 +121,7 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <p class="intro">Every student has something to teach, and something new to discover.</p>
 <section class="panel">
 <h2><?=$editing?'Edit profile':'Register a student'?></h2>
+<p class="form-hint">All fields are required. IDs must be unique positive whole numbers.</p>
 <form method="post" class="form-grid"><?php csrf();hidden('action','student_save');hidden('editing',$editing?'1':'0');field('Student ID','id',$record['id']??'','number',$editing);field('Full name','name',$record['name']??'');field('Skills offered','skills_offered',$record['skills_offered']??'');field('Skills to learn','skills_needed',$record['skills_needed']??'');?><div class="form-actions">
 <button><?=$editing?'Save profile':'Register student'?></button><?php if($editing):?><a href="?page=students">Cancel edit</a><?php endif ?></div>
 </form>
@@ -134,7 +135,7 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <button class="secondary">Search</button><?php if($q!==''):?><a href="?page=students">Clear search</a><?php endif ?>
 </form>
 </div>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Student directory: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>
@@ -151,8 +152,8 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 </td>
 <td><?=h($r['skills_offered'])?></td>
 <td><?=h($r['skills_needed'])?></td>
-<td class="actions">
-<a href="?page=students&amp;edit=<?=$r['id']?>">View / Edit</a><?php deleteButton('students',$r['id']);?></td>
+<td><div class="actions">
+<a href="?page=students&amp;edit=<?=$r['id']?>">View / Edit</a><?php deleteButton('students',$r['id']);?></div></td>
 </tr><?php endforeach ?></tbody>
 </table>
 </div>
@@ -162,6 +163,7 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <section class="panel">
 <h2><?=$editing?'Edit listing':'Create a skill listing'?></h2>
 <?php if(!$studentOptions):?><p class="notice">First <a href="?page=students">register a student</a> to create a listing.</p><?php endif ?>
+<p class="form-hint">All fields are required. IDs must be unique positive whole numbers.</p>
 <form method="post" class="form-grid"><?php csrf();hidden('action','skill_save');hidden('editing',$editing?'1':'0');field('Listing ID','id',$record['id']??'','number',$editing);select('Student','student_id',$studentOptions,$record['student_id']??'');field('Skill name','skill_name',$record['skill_name']??'');select('Listing type','type',['Offer'=>'Offer — I can teach','Learn'=>'Learn — I want to learn'],$record['type']??'');area('Description','description',$record['description']??'');?><div class="form-actions">
 <button <?=!$studentOptions?'disabled':''?>><?=$editing?'Save listing':'Create listing'?></button><?php if($editing):?><a href="?page=skills">Cancel edit</a><?php endif ?></div>
 </form>
@@ -177,7 +179,7 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <button class="secondary">Filter</button><?php if($q!=='' || $type!==''):?><a href="?page=skills">Clear filters</a><?php endif ?>
 </form>
 </div>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Skill listings: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>
@@ -196,8 +198,8 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <td><?=h($r['name'])?></td>
 <td><?=badge($r['type'])?></td>
 <td><?=h($r['description'])?></td>
-<td class="actions">
-<a href="?page=skills&amp;edit=<?=$r['id']?>">Edit</a><?php deleteButton('skill_listings',$r['id']);?></td>
+<td><div class="actions">
+<a href="?page=skills&amp;edit=<?=$r['id']?>">Edit</a><?php deleteButton('skill_listings',$r['id']);?></div></td>
 </tr><?php endforeach ?></tbody>
 </table>
 </div>
@@ -209,6 +211,7 @@ $offers=[];foreach(query("SELECT l.id,l.skill_name,s.name FROM skill_listings l 
 <h2>Schedule a session</h2>
 <p class="muted">Choose an Offer and a different learner. Use a date from 1900 onward and a duration greater than zero and at most 24 hours.</p>
 <?php if(!$offers || count($studentOptions)<2):?><p class="notice">Register <a href="?page=students">two students</a> and create an <a href="?page=skills">Offer listing</a> before scheduling.</p><?php endif ?>
+<p class="form-hint">All fields are required. IDs must be unique positive whole numbers.</p>
 <form method="post" class="form-grid"><?php csrf();hidden('action','session_create');field('Session ID','id',$record['id']??'','number');select('Offered skill','listing_id',$offers,$record['listing_id']??'');select('Learner','learner_id',$studentOptions,$record['learner_id']??'');field('Date','date',$record['date']??'','date');field('Time','time',$record['time']??'','time');?><label>Duration (hours)<input name="duration_hours" type="number" min="0" max="24" step="any" required value="<?=h($record['duration_hours']??1)?>">
 </label>
 <div class="form-actions">
@@ -219,7 +222,7 @@ $offers=[];foreach(query("SELECT l.id,l.skill_name,s.name FROM skill_listings l 
 <section class="panel">
 <h2>Session schedule</h2>
 <p class="muted">Pending → Accepted or Rejected · Accepted → Completed</p>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Session schedule: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>
@@ -243,7 +246,7 @@ $offers=[];foreach(query("SELECT l.id,l.skill_name,s.name FROM skill_listings l 
 <td><?=h($r['duration_hours'])?></td>
 <td><?=badge($r['status'])?></td>
 <td>
-<div class="actions"><?php $next=$r['status']==='Pending'?['Accepted','Rejected']:($r['status']==='Accepted'?['Completed']:[]);foreach($next as $status):?><form method="post" class="inline"><?php csrf();hidden('action','session_status');hidden('id',$r['id']);hidden('status',$status);?><button class="secondary small"><?=h(['Accepted'=>'Accept','Rejected'=>'Reject','Completed'=>'Complete'][$status])?></button>
+<div class="actions"><?php $next=$r['status']==='Pending'?['Accepted','Rejected']:($r['status']==='Accepted'?['Completed']:[]);foreach($next as $status):?><form method="post" class="inline"><?php csrf();hidden('action','session_status');hidden('id',$r['id']);hidden('status',$status);?><button class="secondary small" aria-label="<?=h($status)?> session #<?=$r['id']?>"><?=h(['Accepted'=>'Accept','Rejected'=>'Reject','Completed'=>'Complete'][$status])?></button>
 </form><?php endforeach;deleteButton('tutoring_sessions',$r['id']);?></div>
 </td>
 </tr><?php endforeach ?></tbody>
@@ -262,13 +265,14 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 <section class="panel">
 <h2><?=$editing?'Edit feedback':'Share session feedback'?></h2>
 <?php if(!$eligible):?><p class="notice">No unreviewed completed sessions. <a href="?page=sessions">Complete a tutoring session</a> before leaving feedback.</p><?php endif ?>
+<p class="form-hint">All fields are required. One review is allowed per completed session.</p>
 <form method="post" class="form-grid"><?php csrf();hidden('action','feedback_save');hidden('editing',$editing?'1':'0');select('Completed session','session_id',$eligible,$record['session_id']??'');select('Rating','rating',[5=>'5 — Excellent',4=>'4 — Good',3=>'3 — Satisfactory',2=>'2 — Needs improvement',1=>'1 — Poor'],$record['rating']??'');area('Comments','comments',$record['comments']??'');?><div class="form-actions">
 <button <?=!$eligible?'disabled':''?>>Save feedback</button><?php if($editing):?><a href="?page=feedback">Cancel edit</a><?php endif ?></div>
 </form>
 </section>
 <section class="panel">
 <h2>Community feedback</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Community feedback: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>
@@ -288,8 +292,8 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 <small><?=$r['rating']?> / 5</small>
 </td>
 <td><?=h($r['comments'])?></td>
-<td class="actions">
-<a href="?page=feedback&amp;edit=<?=$r['session_id']?>">Edit</a><?php deleteButton('feedback',$r['session_id']);?></td>
+<td><div class="actions">
+<a href="?page=feedback&amp;edit=<?=$r['session_id']?>">Edit</a><?php deleteButton('feedback',$r['session_id']);?></div></td>
 </tr><?php endforeach ?></tbody>
 </table>
 </div>
@@ -305,7 +309,7 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 <section class="panel">
 <h2>Learning milestones</h2>
 <p class="muted">Hours count when sessions are completed, whether or not feedback has been submitted.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Learning milestones: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>
@@ -329,7 +333,7 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 </section>
 <section class="panel">
 <h2>Completed learning sessions</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
+<div class="table-wrap" role="region" aria-label="Completed learning sessions: scroll to see all columns" tabindex="0">
 <table>
 <thead>
 <tr>

@@ -54,7 +54,7 @@ aside {
   font-size:26px
 }
 .eyebrow {
-  font-size:10px;
+  font-size:12px;
   letter-spacing:1.7px;
   font-weight:700;
   color:var(--muted)
@@ -75,7 +75,7 @@ nav a {
   gap:13px
 }
 nav a span {
-  font-size:11px;
+  font-size:12px;
   opacity:.6
 }
 nav a.active {
@@ -97,7 +97,7 @@ nav a.active {
   color:var(--teal)
 }
 .sidebar-note>span {
-  font-size:10px;
+  font-size:12px;
   color:var(--muted)
 }
 main {
@@ -127,7 +127,7 @@ h3 {
   margin-top:28px
 }
 .campus {
-  font-size:11px;
+  font-size:12px;
   background:#fff;
   border:1px solid var(--line);
   border-radius:30px;
@@ -158,7 +158,7 @@ h3 {
   margin-bottom:24px
 }
 .pill {
-  font-size:9px;
+  font-size:12px;
   letter-spacing:1.5px;
   color:var(--lime);
   border:1px solid #59877a;
@@ -205,7 +205,7 @@ button,.button {
   padding:11px 18px;
   border:1px solid transparent;
   border-radius:7px;
-  font:600 12px system-ui;
+  font:600 13px system-ui;
   cursor:pointer;
   min-height:40px
 }
@@ -230,7 +230,7 @@ button:hover,.button:hover {
 .small {
   padding:5px 9px;
   min-height:30px;
-  font-size:11px
+  font-size:12px
 }
 .stats {
   display:grid;
@@ -262,7 +262,7 @@ button:hover,.button:hover {
 }
 .stat small {
   color:var(--teal);
-  font-size:10px
+  font-size:12px
 }
 .panel {
   background:white;
@@ -309,7 +309,7 @@ button:hover,.button:hover {
   color:var(--teal)
 }
 .impact span {
-  font-size:11px;
+  font-size:12px;
   color:var(--muted)
 }
 .steps {
@@ -330,7 +330,7 @@ button:hover,.button:hover {
 .steps span {
   display:block;
   color:var(--muted);
-  font-size:11px
+  font-size:12px
 }
 .table-wrap {
   overflow:auto
@@ -341,7 +341,7 @@ table {
   text-align:left
 }
 th {
-  font-size:10px;
+  font-size:12px;
   text-transform:uppercase;
   letter-spacing:.7px;
   background:#f7f9f7;
@@ -360,7 +360,7 @@ td {
 }
 td small {
   display:block;
-  font-size:10px;
+  font-size:12px;
   color:var(--muted);
   margin-top:3px
 }
@@ -368,7 +368,7 @@ td small {
   display:inline-block;
   padding:4px 9px;
   border-radius:25px;
-  font-size:10px;
+  font-size:12px;
   font-weight:650;
   background:#eef1f5;
   color:#64718a
@@ -383,7 +383,7 @@ td small {
 }
 .pending,.learn {
   background:#fcf0d6;
-  color:#9a7028
+  color:#79551b
 }
 .rejected {
   background:#f9e9e6;
@@ -407,14 +407,14 @@ label {
   display:flex;
   flex-direction:column;
   gap:7px;
-  font-size:11px;
+  font-size:12px;
   font-weight:600;
   color:#4c6466
 }
 input,select,textarea {
-  font:400 13px system-ui;
+  font:400 14px system-ui;
   background:#fbfcfb;
-  border:1px solid #d8e3dc;
+  border:1px solid #a4b6ae;
   border-radius:6px;
   padding:11px;
   color:var(--ink);
@@ -520,103 +520,103 @@ footer {
   display:flex;
   justify-content:space-between;
   gap:20px;
-  font-size:10px;
+  font-size:12px;
   color:var(--muted);
   padding:12px 0
 }
 @media(min-width:1600px) {
   main {
-  margin-right:auto
-}
+    margin-right:auto
+  }
 
 }
 @media(max-width:1150px) {
   main {
-  padding:28px
-}
-aside {
-  width:220px
-}
-main {
-  margin-left:220px
-}
-.hero-art {
-  display:none
-}
-.two-col {
-  grid-template-columns:1fr
-}
-.stats {
-  gap:10px
-}
-.stat {
-  padding:18px
-}
+    padding:28px
+  }
+  aside {
+    width:220px
+  }
+  main {
+    margin-left:220px
+  }
+  .hero-art {
+    display:none
+  }
+  .two-col {
+    grid-template-columns:1fr
+  }
+  .stats {
+    gap:10px
+  }
+  .stat {
+    padding:18px
+  }
 
 }
 @media(max-width:760px) {
   aside {
-  position:static;
-  width:auto;
-  padding:18px;
-  border-right:0;
-  border-bottom:1px solid var(--line)
-}
-aside>.eyebrow,.sidebar-note {
-  display:none
-}
-nav {
-  display:flex;
-  overflow:auto;
-  margin-top:15px;
-  gap:4px
-}
-nav a {
-  white-space:nowrap;
-  padding:9px;
-  font-size:11px
-}
-nav a span {
-  display:none
-}
-main {
-  margin:0;
-  padding:22px 16px
-}
-h1 {
-  font-size:25px
-}
-.campus {
-  display:none
-}
-.hero {
-  padding:28px 24px
-}
-.hero h2 {
-  font-size:30px
-}
-.stats {
-  grid-template-columns:1fr 1fr
-}
-.panel {
-  padding:18px
-}
-.form-grid {
-  grid-template-columns:1fr
-}
-.search input {
-  width:170px
-}
-.impact {
-  gap:25px
-}
-.section-title {
-  align-items:flex-start
-}
-footer {
-  flex-direction:column;
-  gap:0
-}
+    position:static;
+    width:auto;
+    padding:18px;
+    border-right:0;
+    border-bottom:1px solid var(--line)
+  }
+  aside>.eyebrow,.sidebar-note {
+    display:none
+  }
+  nav {
+    display:flex;
+    overflow:auto;
+    margin-top:15px;
+    gap:4px
+  }
+  nav a {
+    white-space:nowrap;
+    padding:9px;
+    font-size:12px
+  }
+  nav a span {
+    display:none
+  }
+  main {
+    margin:0;
+    padding:22px 16px
+  }
+  h1 {
+    font-size:25px
+  }
+  .campus {
+    display:none
+  }
+  .hero {
+    padding:28px 24px
+  }
+  .hero h2 {
+    font-size:30px
+  }
+  .stats {
+    grid-template-columns:1fr 1fr
+  }
+  .panel {
+    padding:18px
+  }
+  .form-grid {
+    grid-template-columns:1fr
+  }
+  .search input {
+    width:170px
+  }
+  .impact {
+    gap:25px
+  }
+  .section-title {
+    align-items:flex-start
+  }
+  footer {
+    flex-direction:column;
+    gap:0
+  }
 
 }
 
@@ -637,4 +637,19 @@ button,.button,.small,nav a { min-height:44px }
   .form-grid { grid-template-columns:minmax(0,1fr) }
   .search { width:100% }
   .search input { flex:1 1 160px; width:auto }
+}
+
+.form-hint { color:var(--muted); font-size:12px; margin:0 0 18px }
+.table-wrap { border:1px solid var(--line); border-radius:8px }
+thead th { position:sticky; top:0; z-index:1 }
+tbody tr:hover { background:#f5f9f6 }
+tbody tr:last-child td { border-bottom:0 }
+input,select,textarea { min-height:44px }
+input:focus-visible,select:focus-visible,textarea:focus-visible { outline:3px solid var(--teal); outline-offset:2px }
+@media(max-width:760px) {
+  input,select,textarea { font-size:16px }
+  .rating-list>div { min-width:0; flex:1 1 180px }
+}
+@media(forced-colors:active) {
+  .badge,.notice,nav a.active { border:1px solid CanvasText }
 }
