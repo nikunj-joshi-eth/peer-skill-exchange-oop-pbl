@@ -12,11 +12,12 @@ require __DIR__ . "/bootstrap.php";
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
 <aside>
 <a class="brand" href="?">
 <span class="logo">P</span>PeerLearn</a>
 <div class="eyebrow">CAMPUS SKILL EXCHANGE</div>
-<nav aria-label="Main navigation"><?php $n=0; foreach($pages as $key=>$label): ?><a href="?page=<?=$key?>" class="<?=$page===$key?'active':''?>">
+<nav aria-label="Main navigation"><?php $n=0; foreach($pages as $key=>$label): ?><a href="?page=<?=$key?>" class="<?=$page===$key?'active':''?>" <?=$page===$key?'aria-current="page"':''?>>
 <span>0<?=++$n?></span><?=h($label)?></a><?php endforeach ?></nav>
 <div class="sidebar-note">
 <strong>Knowledge grows<br>when we share it.</strong>
@@ -24,7 +25,7 @@ require __DIR__ . "/bootstrap.php";
 <span>University OOP Project</span>
 </div>
 </aside>
-<main>
+<main id="main-content" tabindex="-1">
 <header>
 <div>
 <div class="eyebrow">LEARN TOGETHER. GROW TOGETHER.</div>
@@ -32,7 +33,7 @@ require __DIR__ . "/bootstrap.php";
 </div>
 <span class="campus">● Campus workspace</span>
 </header>
-<?php if($flash): ?><div role="status" class="notice <?=h($flash[0])?>"><?=h($flash[1])?></div><?php endif ?>
+<?php if($flash): ?><div role="<?=$flash[0]==='error'?'alert':'status'?>" tabindex="-1" class="notice <?=h($flash[0])?>"><?=h($flash[1])?></div><?php endif ?>
 <?php if($page==='overview'):
 $counts=query('SELECT (SELECT COUNT(*) FROM students) students,(SELECT COUNT(*) FROM skill_listings) skills,(SELECT COUNT(*) FROM tutoring_sessions) sessions,(SELECT COUNT(*) FROM feedback) feedback')[0];
 $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours FROM tutoring_sessions WHERE status='Completed'")[0]; ?>
@@ -97,14 +98,14 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <h2>Recent sessions</h2>
 <a href="?page=sessions">View all →</a>
 </div>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Session</th>
-<th>Skill</th>
-<th>When</th>
-<th>Status</th>
+<th scope="col">Session</th>
+<th scope="col">Skill</th>
+<th scope="col">When</th>
+<th scope="col">Status</th>
 </tr>
 </thead>
 <tbody><?php $rows=query('SELECT t.*,l.skill_name FROM tutoring_sessions t JOIN skill_listings l ON l.id=t.listing_id ORDER BY t.id DESC LIMIT 5'); if(!$rows)emptyRow(4);foreach($rows as $r): ?><tr>
@@ -130,17 +131,17 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <form class="search">
 <input type="hidden" name="page" value="students">
 <input name="q" value="<?=h($q)?>" placeholder="Name, skill or student ID" aria-label="Search students">
-<button class="secondary">Search</button>
+<button class="secondary">Search</button><?php if($q!==''):?><a href="?page=students">Clear search</a><?php endif ?>
 </form>
 </div>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Student</th>
-<th>Offers</th>
-<th>Wants to learn</th>
-<th>Manage</th>
+<th scope="col">Student</th>
+<th scope="col">Offers</th>
+<th scope="col">Wants to learn</th>
+<th scope="col">Manage</th>
 </tr>
 </thead>
 <tbody><?php $rows=query('SELECT * FROM students WHERE name LIKE ? OR skills_offered LIKE ? OR skills_needed LIKE ? OR CAST(id AS TEXT)=? ORDER BY id',["%$q%","%$q%","%$q%",$q]);if(!$rows)emptyRow(4);foreach($rows as $r):?><tr>
@@ -160,8 +161,9 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <p class="intro">Turn what you know into an opportunity for someone else.</p>
 <section class="panel">
 <h2><?=$editing?'Edit listing':'Create a skill listing'?></h2>
+<?php if(!$studentOptions):?><p class="notice">First <a href="?page=students">register a student</a> to create a listing.</p><?php endif ?>
 <form method="post" class="form-grid"><?php csrf();hidden('action','skill_save');hidden('editing',$editing?'1':'0');field('Listing ID','id',$record['id']??'','number',$editing);select('Student','student_id',$studentOptions,$record['student_id']??'');field('Skill name','skill_name',$record['skill_name']??'');select('Listing type','type',['Offer'=>'Offer — I can teach','Learn'=>'Learn — I want to learn'],$record['type']??'');area('Description','description',$record['description']??'');?><div class="form-actions">
-<button><?=$editing?'Save listing':'Create listing'?></button><?php if($editing):?><a href="?page=skills">Cancel edit</a><?php endif ?></div>
+<button <?=!$studentOptions?'disabled':''?>><?=$editing?'Save listing':'Create listing'?></button><?php if($editing):?><a href="?page=skills">Cancel edit</a><?php endif ?></div>
 </form>
 </section>
 <section class="panel">
@@ -172,18 +174,18 @@ $summary=query("SELECT COUNT(*) completed,COALESCE(SUM(duration_hours),0) hours 
 <input name="q" value="<?=h($q)?>" placeholder="Search skills" aria-label="Search skills">
 <select name="type" aria-label="Filter type">
 <option value="">All types</option><?php foreach(['Offer','Learn'] as $v):?><option <?=$type===$v?'selected':''?>><?=$v?></option><?php endforeach ?></select>
-<button class="secondary">Filter</button>
+<button class="secondary">Filter</button><?php if($q!=='' || $type!==''):?><a href="?page=skills">Clear filters</a><?php endif ?>
 </form>
 </div>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Skill</th>
-<th>Student</th>
-<th>Type</th>
-<th>Description</th>
-<th>Manage</th>
+<th scope="col">Skill</th>
+<th scope="col">Student</th>
+<th scope="col">Type</th>
+<th scope="col">Description</th>
+<th scope="col">Manage</th>
 </tr>
 </thead>
 <tbody><?php $rows=query("SELECT l.*,s.name FROM skill_listings l JOIN students s ON s.id=l.student_id WHERE (l.skill_name LIKE ? OR l.description LIKE ?) AND (?='' OR l.type=?) ORDER BY l.id",["%$q%","%$q%",$type,$type]);if(!$rows)emptyRow(5);foreach($rows as $r):?><tr>
@@ -205,26 +207,28 @@ $offers=[];foreach(query("SELECT l.id,l.skill_name,s.name FROM skill_listings l 
 <p class="intro">Make time for learning. Request, accept, then celebrate a completed session.</p>
 <section class="panel">
 <h2>Schedule a session</h2>
-<form method="post" class="form-grid"><?php csrf();hidden('action','session_create');field('Session ID','id',$record['id']??'','number');select('Offered skill','listing_id',$offers,$record['listing_id']??'');select('Learner','learner_id',$studentOptions,$record['learner_id']??'');field('Date','date',$record['date']??'','date');field('Time','time',$record['time']??'','time');?><label>Duration (hours)<input name="duration_hours" type="number" min="0.01" max="24" step="any" required value="<?=h($record['duration_hours']??1)?>">
+<p class="muted">Choose an Offer and a different learner. Use a date from 1900 onward and a duration greater than zero and at most 24 hours.</p>
+<?php if(!$offers || count($studentOptions)<2):?><p class="notice">Register <a href="?page=students">two students</a> and create an <a href="?page=skills">Offer listing</a> before scheduling.</p><?php endif ?>
+<form method="post" class="form-grid"><?php csrf();hidden('action','session_create');field('Session ID','id',$record['id']??'','number');select('Offered skill','listing_id',$offers,$record['listing_id']??'');select('Learner','learner_id',$studentOptions,$record['learner_id']??'');field('Date','date',$record['date']??'','date');field('Time','time',$record['time']??'','time');?><label>Duration (hours)<input name="duration_hours" type="number" min="0" max="24" step="any" required value="<?=h($record['duration_hours']??1)?>">
 </label>
 <div class="form-actions">
-<button>Request session</button>
+<button <?=!$offers || count($studentOptions)<2?'disabled':''?>>Request session</button>
 </div>
 </form>
 </section>
 <section class="panel">
 <h2>Session schedule</h2>
 <p class="muted">Pending → Accepted or Rejected · Accepted → Completed</p>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Skill / ID</th>
-<th>Learning partners</th>
-<th>Date & time</th>
-<th>Hours</th>
-<th>Status</th>
-<th>Manage</th>
+<th scope="col">Skill / ID</th>
+<th scope="col">Learning partners</th>
+<th scope="col">Date & time</th>
+<th scope="col">Hours</th>
+<th scope="col">Status</th>
+<th scope="col">Manage</th>
 </tr>
 </thead>
 <tbody><?php $rows=query('SELECT t.*,l.skill_name,a.name learner,b.name tutor FROM tutoring_sessions t JOIN skill_listings l ON l.id=t.listing_id JOIN students a ON a.id=t.learner_id JOIN students b ON b.id=t.tutor_id ORDER BY t.date,t.time');if(!$rows)emptyRow(6);foreach($rows as $r):?><tr>
@@ -257,21 +261,22 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 </div>
 <section class="panel">
 <h2><?=$editing?'Edit feedback':'Share session feedback'?></h2>
+<?php if(!$eligible):?><p class="notice">No unreviewed completed sessions. <a href="?page=sessions">Complete a tutoring session</a> before leaving feedback.</p><?php endif ?>
 <form method="post" class="form-grid"><?php csrf();hidden('action','feedback_save');hidden('editing',$editing?'1':'0');select('Completed session','session_id',$eligible,$record['session_id']??'');select('Rating','rating',[5=>'5 — Excellent',4=>'4 — Good',3=>'3 — Satisfactory',2=>'2 — Needs improvement',1=>'1 — Poor'],$record['rating']??'');area('Comments','comments',$record['comments']??'');?><div class="form-actions">
-<button>Save feedback</button><?php if($editing):?><a href="?page=feedback">Cancel edit</a><?php endif ?></div>
+<button <?=!$eligible?'disabled':''?>>Save feedback</button><?php if($editing):?><a href="?page=feedback">Cancel edit</a><?php endif ?></div>
 </form>
 </section>
 <section class="panel">
 <h2>Community feedback</h2>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Session</th>
-<th>Learner / Tutor</th>
-<th>Rating</th>
-<th>Comments</th>
-<th>Manage</th>
+<th scope="col">Session</th>
+<th scope="col">Learner / Tutor</th>
+<th scope="col">Rating</th>
+<th scope="col">Comments</th>
+<th scope="col">Manage</th>
 </tr>
 </thead>
 <tbody><?php $rows=query('SELECT f.*,a.name learner,b.name tutor FROM feedback f JOIN tutoring_sessions t ON t.id=f.session_id JOIN students a ON a.id=f.student_id JOIN students b ON b.id=t.tutor_id ORDER BY f.session_id DESC');if(!$rows)emptyRow(5);foreach($rows as $r):?><tr>
@@ -289,6 +294,7 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 </table>
 </div>
 <h3>Tutor ratings</h3>
+<?php if(!$rating['count']):?><p class="muted">Tutor ratings appear after the first session review.</p><?php endif ?>
 <div class="rating-list"><?php foreach(query('SELECT s.name,ROUND(AVG(f.rating),2) rating,COUNT(*) reviews FROM feedback f JOIN tutoring_sessions t ON t.id=f.session_id JOIN students s ON s.id=t.tutor_id GROUP BY s.id') as $r):?><div>
 <strong><?=h($r['name'])?></strong>
 <span><?=h($r['rating'])?> / 5 · <?=$r['reviews']?> reviews</span>
@@ -299,13 +305,13 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 <section class="panel">
 <h2>Learning milestones</h2>
 <p class="muted">Hours count when sessions are completed, whether or not feedback has been submitted.</p>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Learner</th>
-<th>Completed sessions</th>
-<th>Total learning hours</th>
+<th scope="col">Learner</th>
+<th scope="col">Completed sessions</th>
+<th scope="col">Total learning hours</th>
 </tr>
 </thead>
 <tbody><?php $rows=query('SELECT * FROM learning_progress ORDER BY learning_hours DESC,name');if(!$rows)emptyRow(3);foreach($rows as $r):?><tr>
@@ -323,14 +329,14 @@ $rating=query('SELECT ROUND(AVG(rating),2) average,COUNT(*) count FROM feedback'
 </section>
 <section class="panel">
 <h2>Completed learning sessions</h2>
-<div class="table-wrap">
+<div class="table-wrap" role="region" aria-label="Scrollable records" tabindex="0">
 <table>
 <thead>
 <tr>
-<th>Learner</th>
-<th>Skill</th>
-<th>Date</th>
-<th>Hours</th>
+<th scope="col">Learner</th>
+<th scope="col">Skill</th>
+<th scope="col">Date</th>
+<th scope="col">Hours</th>
 </tr>
 </thead>
 <tbody><?php $rows=query("SELECT s.name,l.skill_name,t.date,t.duration_hours FROM tutoring_sessions t JOIN students s ON s.id=t.learner_id JOIN skill_listings l ON l.id=t.listing_id WHERE t.status='Completed' ORDER BY t.date DESC");if(!$rows)emptyRow(4);foreach($rows as $r):?><tr>

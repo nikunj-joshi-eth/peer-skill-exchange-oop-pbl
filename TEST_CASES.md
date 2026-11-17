@@ -1,14 +1,18 @@
 # Executed test results
 
-Run: 2026-11-16T05:38:32.172337+00:00
+Run: 2026-11-17T03:50:37.681112+00:00
 
 Environment: Windows; MinGW GCC 6.3.0; SQLite amalgamation 3.51.3; PHP executable `C:/xampp/php/php.exe`; Python standard library.
 
-Result: 32 passed, 0 failed.
+Result: 40 passed, 0 failed.
 
 | Test | Result | Evidence |
 | --- | --- | --- |
 | All six empty dashboard pages render over HTTP | PASS | Executed successfully |
+| Array query parameters handled without warnings | PASS | Executed successfully |
+| Malformed POST fields rejected without mutation | PASS | Executed successfully |
+| Missing prerequisites and keyboard navigation exposed | PASS | Executed successfully |
+| Existing schema stays stable; both clients repair missing objects | PASS | Executed successfully |
 | CSS and JavaScript served successfully | PASS | Executed successfully |
 | Console rejects trailing numeric text and empty names | PASS | Executed successfully |
 | C++ registration appears in PHP dashboard | PASS | Executed successfully |
@@ -31,6 +35,9 @@ Result: 32 passed, 0 failed.
 | Duplicate feedback rejected in both interfaces | PASS | Executed successfully |
 | Feedback and skill editing persist | PASS | Executed successfully |
 | Booked listing ownership/type immutable and deletion protected | PASS | Executed successfully |
+| Failed status forms do not populate create fields | PASS | Executed successfully |
+| Validation preserves edited form values | PASS | Executed successfully |
+| Missing edit record gives useful error | PASS | Executed successfully |
 | Missing or invalid CSRF rejected without mutation | PASS | Executed successfully |
 | Database directly rejects foreign keys, bad dates, feedback identity and status bypasses | PASS | Executed successfully |
 | Rejected sessions remain terminal | PASS | Executed successfully |
@@ -40,13 +47,12 @@ Result: 32 passed, 0 failed.
 | Restarted PHP serves persisted feedback | PASS | Executed successfully |
 | Delete feedback, sessions, listings and students in dependency order | PASS | Executed successfully |
 | Foreign key integrity clean | PASS | Executed successfully |
+| Unavailable database returns safe actionable HTTP 503 | PASS | Executed successfully |
 
 Reproduce: `python tests/integration.py --php C:/xampp/php/php.exe` after building the console. Tests create and remove an isolated temporary database under `build/`; the real project database is untouched.
 
-Additional executed checks: milestone 1 compiled with `-std=c++11 -Wall -Wextra -pedantic`; numeric trailing text, blank name, duplicate ID and display smoke checks passed. Milestone 2 completed a console registration/listing/session/feedback workflow and restart; six direct constraint failures were rejected. Dashboard PHP syntax and HTTP GET checks passed for all six pages and both assets.
+Compilation and PHP lint results are reported separately in the review handoff. The checks above exercise the current implementation over real console processes, HTTP requests, and isolated SQLite connections.
 
 Not executed: interactive browser layout/accessibility review, JavaScript confirmation-dialog interaction, or multi-user load testing. No browser automation tool is available in this session. Responsive CSS and confirmation code were inspected; this is not a visual test pass.
 
 Git push results are documented separately in the final handoff.
-
-Final setup checks: the documented PowerShell build script completed successfully; all three PHP syntax checks and warning-enabled C++ compilation passed. Default PHP server launch (without session configuration overrides) passed GET and persistent-CSRF POST checks with no server warnings after storing sessions in `database/sessions/`. A non-mutating unknown action was used; normal user records were unchanged.

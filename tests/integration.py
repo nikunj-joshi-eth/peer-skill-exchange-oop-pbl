@@ -110,6 +110,22 @@ def main():
                 raise RuntimeError('PHP server did not become ready')
 
             check('All six empty dashboard pages render over HTTP', lambda: [get(p) for p in ['overview','students','skills','sessions','feedback','progress']])
+            check('Array query parameters handled without warnings', lambda: require('Warning' not in get('overview','&page[]=students&q[]=x&type[]=Offer&edit[]=1')))
+            check('Malformed POST fields rejected without mutation', lambda: (post('students','student_save',False,id=104,**{'name[]':'x'},skills_offered='x',skills_needed='x'),post('sessions','session_create',False,**{'duration_hours[]':'1'}),post('students','student_save',False,**{'action[]':'delete'}),require(not rows('SELECT * FROM students'))))
+            check('Missing prerequisites and keyboard navigation exposed', lambda: (require('register a student' in get('skills')),require('two students' in get('sessions')),require('No unreviewed completed sessions' in get('feedback')),require('Skip to main content' in get()),require('aria-current="page"' in get())))
+            def schema_checks():
+                version = rows('PRAGMA schema_version')
+                get('students')
+                console('0\n')
+                require(rows('PRAGMA schema_version') == version)
+                with closing(sqlite3.connect(path)) as connection:
+                    connection.execute('DROP VIEW learning_progress')
+                require('Learning milestones' in get('progress'))
+                with closing(sqlite3.connect(path)) as connection:
+                    connection.execute('DROP VIEW learning_progress')
+                console('0\n')
+                require(rows("SELECT name FROM sqlite_master WHERE name='learning_progress'") == [('learning_progress',)])
+            check('Existing schema stays stable; both clients repair missing objects', schema_checks)
             check('CSS and JavaScript served successfully', lambda: [require(opener.open(base+'assets/'+asset).status==200) for asset in ['style.css','app.js']])
             check('Console rejects trailing numeric text and empty names', lambda: require('This field cannot be empty' in console('1x\n1\n101\n   \nTutor\nC++\nMath\n0\n')))
             check('C++ registration appears in PHP dashboard', lambda: require('Tutor' in get('students') and '#101' in get('students')))
@@ -117,9 +133,9 @@ def main():
             check('PHP changes appear after C++ restart', lambda: require('Learner' in console('2\n0\n')))
             check('Duplicate student IDs rejected in both interfaces', lambda: (post('students','student_save',False,id=101,name='Duplicate',skills_offered='x',skills_needed='x'),require('Invalid or duplicate' in console('1\n101\n0\n'))))
             check('Empty and malformed student fields rejected', lambda: (post('students','student_save',False,id=103,name=' ',skills_offered='x',skills_needed='x'),post('students','student_save',False,id='103x',name='x',skills_offered='x',skills_needed='x'),post('students','student_save',False,id=2147483648,name='x',skills_offered='x',skills_needed='x')))
-            check('Profile editing, search and SQL-like input', lambda: (post('students','student_save',editing=1,id=102,name="Learner O'Neil",skills_offered='Math',skills_needed='C++'),require("Learner O&#039;Neil" in get('students','&q=O%27Neil')),require('No records yet' in get('students','&q=%27%20OR%201%3D1--'))))
+            check('Profile editing, search and SQL-like input', lambda: (post('students','student_save',editing=1,id=102,name="Learner O'Neil",skills_offered='Math',skills_needed='C++'),require("Learner O&#039;Neil" in get('students','&q=O%27Neil')),require('No matching records' in get('students','&q=%27%20OR%201%3D1--'))))
             check('C++ listing creation visible on dashboard', lambda: (require('Skill listing created' in console('4\n201\n101\nC++\nOffer\nBasics\n0\n')),require('Basics' in get('skills'))))
-            check('PHP Learn listing and search/type filtering', lambda: (post('skills','skill_save',id=202,student_id=102,skill_name='Calculus',type='Learn',description='Practice'),require('Calculus' in get('skills','&type=Learn&q=Calculus')),require('No records yet' in get('skills','&type=Offer&q=Calculus'))))
+            check('PHP Learn listing and search/type filtering', lambda: (post('skills','skill_save',id=202,student_id=102,skill_name='Calculus',type='Learn',description='Practice'),require('Calculus' in get('skills','&type=Learn&q=Calculus')),require('No matching records' in get('skills','&type=Offer&q=Calculus'))))
             check('Invalid listing owner and type rejected', lambda: (post('skills','skill_save',False,id=203,student_id=999,skill_name='x',type='Offer',description='x'),post('skills','skill_save',False,id=203,student_id=101,skill_name='x',type='Other',description='x')))
             check('Session scheduling and C++ visibility', lambda: (schedule(),require('Session ID: 301' in console('9\n0\n'))))
             check('Self tutoring, missing learner and Learn bookings rejected', lambda: [post('sessions','session_create',False,id=302,listing_id=listing,learner_id=learner,date='2026-11-20',time='14:30',duration_hours=1) for listing,learner in [(201,101),(201,999),(202,101)]])
@@ -132,6 +148,9 @@ def main():
             check('Duplicate feedback rejected in both interfaces', lambda: (post('feedback','feedback_save',False,session_id=301,rating=4,comments='duplicate'),require('Feedback already exists' in console('11\n301\n0\n'))))
             check('Feedback and skill editing persist', lambda: (post('feedback','feedback_save',editing=1,session_id=301,rating=4,comments='Revised review'),post('skills','skill_save',editing=1,id=201,student_id=101,skill_name='C++ foundations',type='Offer',description='Updated'),require('Revised review' in console('12\n0\n')),require('C++ foundations' in console('5\n0\n'))))
             check('Booked listing ownership/type immutable and deletion protected', lambda: (post('skills','skill_save',False,editing=1,id=201,student_id=102,skill_name='x',type='Learn',description='x'),post('skills','delete',False,table='skill_listings',id=201),post('students','delete',False,table='students',id=101)))
+            check('Failed status forms do not populate create fields', lambda: require('name="id" type="number" value=""' in post('sessions','session_status',False,id=301,status='Accepted')))
+            check('Validation preserves edited form values', lambda: require('value="Retained name"' in post('students','student_save',False,editing=1,id=102,name='Retained name',skills_offered='',skills_needed='C++')))
+            check('Missing edit record gives useful error', lambda: require('record to edit no longer exists' in get('students','&edit=999')))
             check('Missing or invalid CSRF rejected without mutation', lambda: (post('students','student_save',False,csrf='bad',id=104,name='Bad CSRF',skills_offered='x',skills_needed='x'),post('students','student_save',False,csrf='',id=104,name='Missing CSRF',skills_offered='x',skills_needed='x'),require(not rows('SELECT * FROM students WHERE id=104'))))
             check('Database directly rejects foreign keys, bad dates, feedback identity and status bypasses', lambda: [reject_sql(sql) for sql in ["INSERT INTO skill_listings VALUES(999,999,'x','Offer','x')","INSERT INTO tutoring_sessions VALUES(302,201,102,101,'2026-02-30','12:00',1,'Pending')","INSERT INTO tutoring_sessions VALUES(302,201,102,101,'2026-11-20','12:00',1,'Completed')","UPDATE tutoring_sessions SET learner_id=101 WHERE id=301","UPDATE feedback SET student_id=101 WHERE session_id=301","UPDATE feedback SET rating=0 WHERE session_id=301","INSERT INTO students VALUES(2147483648,'Too large','x','x')"]])
             check('Rejected sessions remain terminal', lambda: (schedule(302),post('sessions','session_status',id=302,status='Rejected'),post('sessions','session_status',False,id=302,status='Accepted')))
@@ -149,11 +168,28 @@ def main():
             check('Restarted PHP serves persisted feedback', lambda: require('Revised review' in get('feedback')))
             check('Delete feedback, sessions, listings and students in dependency order', lambda: (post('feedback','delete',table='feedback',id=301),post('sessions','delete',table='tutoring_sessions',id=301),post('sessions','delete',table='tutoring_sessions',id=302),require('Record deleted' in console('17\n3\n303\n0\n')),post('skills','delete',table='skill_listings',id=201),post('skills','delete',table='skill_listings',id=202),post('students','delete',table='students',id=101),post('students','delete',table='students',id=102),require(rows('SELECT COUNT(*) FROM students')==[(0,)])))
             check('Foreign key integrity clean', lambda: require(rows('PRAGMA foreign_key_check')==[]))
+            def unavailable_database():
+                nonlocal server
+                server.terminate();server.wait(timeout=5)
+                broken_environment = {**environment, 'SKILL_EXCHANGE_DB': str(directory/'missing'/'exchange.db')}
+                server = subprocess.Popen([args.php, '-S', f'127.0.0.1:{port}', '-t', 'dashboard'], env=broken_environment, stdout=log, stderr=log)
+                for _ in range(50):
+                    try:
+                        opener.open(base, timeout=5)
+                    except urllib.error.HTTPError as error:
+                        body = error.read().decode('utf-8')
+                        require(error.code == 503 and 'temporarily unavailable' in body, body)
+                        require(str(directory) not in body and 'SQLSTATE' not in body and 'Warning' not in body, body)
+                        return
+                    except OSError:
+                        time.sleep(.1)
+                raise AssertionError('Expected a helpful HTTP 503 response')
+            check('Unavailable database returns safe actionable HTTP 503', unavailable_database)
         finally:
             server.terminate();server.wait(timeout=5);log.close()
             report=['# Executed test results','',f'Run: {datetime.now(timezone.utc).isoformat()}','',f'Environment: Windows; MinGW GCC 6.3.0; SQLite amalgamation 3.51.3; PHP executable `{args.php}`; Python standard library.','',f'Result: {sum(r[1]=="PASS" for r in RESULTS)} passed, {sum(r[1]=="FAIL" for r in RESULTS)} failed.','', '| Test | Result | Evidence |','| --- | --- | --- |']
             report += ['| '+ ' | '.join(part.replace('|','/').replace('\n',' ') for part in row)+' |' for row in RESULTS]
-            report += ['', 'Reproduce: `python tests/integration.py --php C:/xampp/php/php.exe` after building the console. Tests create and remove an isolated temporary database under `build/`; the real project database is untouched.', '', 'Additional executed checks: milestone 1 compiled with `-std=c++11 -Wall -Wextra -pedantic`; numeric trailing text, blank name, duplicate ID and display smoke checks passed. Milestone 2 completed a console registration/listing/session/feedback workflow and restart; six direct constraint failures were rejected. Dashboard PHP syntax and HTTP GET checks passed for all six pages and both assets.', '', 'Not executed: interactive browser layout/accessibility review, JavaScript confirmation-dialog interaction, or multi-user load testing. No browser automation tool is available in this session. Responsive CSS and confirmation code were inspected; this is not a visual test pass.', '', 'Git push results are documented separately in the final handoff.']
+            report += ['', 'Reproduce: `python tests/integration.py --php C:/xampp/php/php.exe` after building the console. Tests create and remove an isolated temporary database under `build/`; the real project database is untouched.', '', 'Compilation and PHP lint results are reported separately in the review handoff. The checks above exercise the current implementation over real console processes, HTTP requests, and isolated SQLite connections.', '', 'Not executed: interactive browser layout/accessibility review, JavaScript confirmation-dialog interaction, or multi-user load testing. No browser automation tool is available in this session. Responsive CSS and confirmation code were inspected; this is not a visual test pass.', '', 'Git push results are documented separately in the final handoff.']
             (ROOT/'TEST_CASES.md').write_text('\n'.join(report)+'\n',encoding='utf-8')
 
 

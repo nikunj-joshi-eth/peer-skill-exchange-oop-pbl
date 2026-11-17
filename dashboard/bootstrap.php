@@ -1,12 +1,21 @@
 <?php
 declare(strict_types=1);
+// Render infrastructure failures without exposing paths or SQL to the browser.
+set_exception_handler(function (Throwable $error): void {
+    error_log((string)$error);
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PeerLearn unavailable</title><h1>PeerLearn is temporarily unavailable</h1><p>Check database and session-directory permissions and run scripts/init_db.php if setup is incomplete. See the server log for details.</p><p><a href="?">Try again</a></p></html>';
+});
 // Keep PHP session files writable and outside the public document root.
 $sessionDirectory = getenv('SKILL_EXCHANGE_SESSION_DIR') ?: __DIR__ . '/../database/sessions';
-if (!is_dir($sessionDirectory) && !mkdir($sessionDirectory, 0700, true) && !is_dir($sessionDirectory)) {
+if (!is_dir($sessionDirectory) && !@mkdir($sessionDirectory, 0700, true) && !is_dir($sessionDirectory)) {
     throw new RuntimeException('Cannot create the local session directory.');
 }
 session_save_path($sessionDirectory);
-session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Strict']);
+if (!@session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Strict'])) {
+    throw new RuntimeException('Cannot start the local session.');
+}
 header('X-Content-Type-Options: nosniff');
 header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
 function h(mixed $value): string {
@@ -18,7 +27,13 @@ function db(): PDO {
         $path = getenv('SKILL_EXCHANGE_DB') ?: __DIR__ . '/../database/skill_exchange.db';
         $db = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
         $db->exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
-        $db->exec(file_get_contents(__DIR__ . '/../database/schema.sql'));
+        // Existing databases need only connection pragmas, not DDL on every request.
+        $objects = $db->query("SELECT COUNT(*) FROM sqlite_master WHERE name IN ('students','skill_listings','tutoring_sessions','feedback','learning_progress','session_insert','session_update','listing_update','feedback_insert','feedback_update','listing_owner','session_learner','session_tutor','session_listing')")->fetchColumn();
+        if ((int)$objects !== 14) {
+            $schema = @file_get_contents(__DIR__ . '/../database/schema.sql');
+            if ($schema === false) throw new RuntimeException('Cannot read database schema.');
+            $db->exec($schema);
+        }
     }
     return $db;
 }
@@ -42,12 +57,16 @@ function exists(string $table, string $column, int $id): void {
 }
 $pages = ['overview'=>'Overview', 'students'=>'Student profiles', 'skills'=>'Skill exchange', 'sessions'=>'Tutoring sessions', 'feedback'=>'Feedback', 'progress'=>'Learning progress'];
 // Routes and table names come from fixed allowlists, never from raw SQL input.
-$page = (string)($_GET['page'] ?? 'overview');
+function requestText(string $key, string $default = ''): string {
+    return is_string($_GET[$key] ?? null) ? $_GET[$key] : $default;
+}
+$page = requestText('page', 'overview');
 if (!isset($pages[$page])) $page = 'overview';
 $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
 // Mutations always require POST plus a session CSRF token, then redirect.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        foreach ($_POST as $value) if (!is_string($value)) throw new InvalidArgumentException('Form fields must contain single values.');
         if (!is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) throw new InvalidArgumentException('Form expired. Reload and try again.');
         $action = (string)($_POST['action'] ?? '');
         switch ($action) {
@@ -98,35 +117,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (str_contains($e->getMessage(),'UNIQUE constraint')) $message='That ID or session feedback already exists.';
         elseif (str_contains($e->getMessage(),'FOREIGN KEY')) $message='A related record is missing, or this record is still in use. Remove dependent records first.';
         elseif (str_contains($e->getMessage(),'constraint') || str_contains($e->getMessage(),'SQLSTATE[23000]')) $message='The change violates a relationship, status, or field rule. Check the values and current session status.';
-        $_SESSION['flash']=['error',$message]; $_SESSION['old']=$_POST;
-    } catch (InvalidArgumentException $e) { $_SESSION['flash']=['error',$e->getMessage()]; $_SESSION['old']=$_POST; }
+        $_SESSION['flash']=['error',$message]; $_SESSION['old']=array_filter($_POST, 'is_string');
+    } catch (InvalidArgumentException $e) { $_SESSION['flash']=['error',$e->getMessage()]; $_SESSION['old']=array_filter($_POST, 'is_string'); }
     header('Location: ?page='.urlencode($page),true,303); exit;
 }
 $flash=$_SESSION['flash'] ?? null; unset($_SESSION['flash']);
-$old=$_SESSION['old'] ?? []; unset($_SESSION['old']);
+$old=$_SESSION['old'] ?? [];
+// Status/delete forms must not populate an unrelated create form.
+if (!in_array($old['action'] ?? '', ['student_save','skill_save','session_create','feedback_save'], true)) $old=[];
+unset($_SESSION['old']);
 function csrf(): void { echo '<input type="hidden" name="csrf" value="'.h($_SESSION['csrf']).'">'; }
 function hidden(string $key, mixed $value): void { echo '<input type="hidden" name="'.h($key).'" value="'.h($value).'">'; }
 function field(string $label,string $name,mixed $value='',string $type='text',bool $readonly=false): void {
-    echo '<label>'.h($label).'<input name="'.h($name).'" type="'.h($type).'" value="'.h($value).'" required '.($readonly?'readonly ':'').($type==='number'?'min="1" ':'').'maxlength="'.(in_array($name,['skills_offered','skills_needed'])?1000:200).'"'.'></label>';
+    echo '<label>'.h($label).'<input name="'.h($name).'" type="'.h($type).'" value="'.h($value).'" required '.($readonly?'readonly ':'').($type==='number'?'min="1" max="2147483647" step="1" ':($type==='date'?'min="1900-01-01" max="9999-12-31" ':'')).'maxlength="'.(in_array($name,['skills_offered','skills_needed'])?1000:200).'"'.'></label>';
 }
 function area(string $label,string $name,mixed $value=''): void { echo '<label class="wide">'.h($label).'<textarea name="'.h($name).'" required maxlength="2000" rows="3">'.h($value).'</textarea></label>'; }
 function select(string $label,string $name,array $options,mixed $selected=''): void {
-    echo '<label>'.h($label).'<select name="'.h($name).'" required><option value="">Choose…</option>';
+    echo '<label>'.h($label).'<select name="'.h($name).'" required'.(!$options?' disabled':'').'><option value="">Choose…</option>';
     foreach ($options as $id=>$title) echo '<option value="'.h($id).'" '.((string)$selected===(string)$id?'selected':'').'>'.h($title).'</option>';
     echo '</select></label>';
 }
 function deleteButton(string $table,int $id): void {
-    echo '<form method="post" class="inline delete-form">'; csrf(); hidden('action','delete'); hidden('table',$table); hidden('id',$id); echo '<button class="danger small">Delete</button></form>';
+    echo '<form method="post" class="inline delete-form">'; csrf(); hidden('action','delete'); hidden('table',$table); hidden('id',$id); echo '<button class="danger small" aria-label="Delete '.h($table).' record #'.$id.'">Delete</button></form>';
 }
 function badge(string $value): string { return '<span class="badge '.h(strtolower($value)).'">'.h($value).'</span>'; }
-function emptyRow(int $columns): void { echo '<tr><td colspan="'.$columns.'" class="empty">No records yet. Add your first record using the form above.</td></tr>'; }
+function emptyRow(int $columns): void {
+    global $page, $q, $type;
+    $message = (in_array($page, ['students','skills'], true) && ($q !== '' || $type !== '')) ? 'No matching records. Clear the search or filter to see all records.' : match ($page) {
+        'overview', 'sessions' => 'No sessions yet. Register two students and an Offer listing, then schedule a session.',
+        'feedback' => 'No feedback yet. Complete a tutoring session before adding feedback.',
+        'progress' => ($columns === 3 ? 'No students yet. Register students to track learning hours.' : 'No completed sessions yet. Complete a tutoring session to record learning hours.'),
+        default => 'No records yet. Add your first record using the form above.'
+    };
+    echo '<tr><td colspan="'.$columns.'" class="empty">'.h($message).'</td></tr>';
+}
 $students=query('SELECT * FROM students ORDER BY id'); $studentOptions=[]; foreach ($students as $s) $studentOptions[$s['id']]=$s['name'].' · #'.$s['id'];
-$edit=filter_var($_GET['edit'] ?? null,FILTER_VALIDATE_INT) ?: 0;
-$q=trim((string)($_GET['q'] ?? '')); $type=(string)($_GET['type'] ?? '');
+$edit=filter_var(requestText('edit'),FILTER_VALIDATE_INT, ['options'=>['min_range'=>1,'max_range'=>2147483647]]) ?: 0;
+$q=trim(requestText('q')); $type=requestText('type');
 $record=$old;
 if (!$record && $edit && in_array($page,['students','skills','feedback'])) {
     $table=['students'=>'students','skills'=>'skill_listings','feedback'=>'feedback'][$page]; $key=$page==='feedback'?'session_id':'id';
     $record=query("SELECT * FROM $table WHERE $key=?",[$edit])[0] ?? []; if ($record) $record['editing']='1';
+    else $flash=['error','The record to edit no longer exists.'];
 }
 $editing=($record['editing'] ?? '')==='1';
 

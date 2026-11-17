@@ -47,6 +47,7 @@ public:
     }
     void execute(const std::string& sql, const Row& values = {}) { query(sql,values); }
     void initialize(const std::string& schema) {
+        if (query("SELECT COUNT(*) FROM sqlite_master WHERE name IN ('students','skill_listings','tutoring_sessions','feedback','learning_progress','session_insert','session_update','listing_update','feedback_insert','feedback_update','listing_owner','session_learner','session_tutor','session_listing')")[0][0] == "14") return;
         std::ifstream file(schema);
         if (!file) throw std::runtime_error("Cannot read schema: " + schema);
         std::stringstream text; text << file.rdbuf();
