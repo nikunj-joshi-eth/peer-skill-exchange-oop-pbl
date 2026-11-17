@@ -2,7 +2,7 @@
 
 Project: **Peer-to-Peer Skill Exchange and Tutoring Platform — SDG 4: Quality Education**.
 
-This map preserves the team's assigned responsibilities from the integrated baseline. Integration, validation, database and dashboard work connect the modules; this document does not attribute generated implementation or Git commits to individual students.
+This map preserves the team's assigned responsibilities from the Phase 2 baseline reconstructed from earlier module prototypes. Integration, validation, database and dashboard work connect the modules; this document does not attribute generated implementation or Git commits to individual students.
 
 | Team member | University ID | C++ module | Shared data | Dashboard responsibility |
 | --- | --- | --- | --- | --- |

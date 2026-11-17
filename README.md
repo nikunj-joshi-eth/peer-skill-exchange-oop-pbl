@@ -2,7 +2,7 @@
 
 A second-year C++ OOP PBL project supporting **SDG 4: Quality Education**. Students register their profiles, offer or request skills, schedule peer tutoring, and track completed learning with feedback. **PeerLearn** is the local web dashboard for the same platform.
 
-The original integrated console source and its four OOP modules are retained. Both interfaces read and write **one SQLite database**: `database/skill_exchange.db`.
+The Phase 2 console source was reconstructed from earlier documented module prototypes; it is not a recovered original integrated source. Its four identifiable OOP classes are retained. Both interfaces read and write **one SQLite database**: `database/skill_exchange.db`.
 
 ## Team
 
@@ -77,7 +77,7 @@ $env:SKILL_EXCHANGE_DB = Join-Path (Get-Location) 'database\demo.db'
 & 'C:\xampp\php\php.exe' -S 127.0.0.1:8080 -t dashboard
 ```
 
-The PHP environment override is optional; C++ uses its first command-line argument as the override. Both applications also initialize missing tables on startup. Use the initializer for an explicit, reproducible setup.
+The PHP environment override is optional; C++ uses its first command-line argument as the override. Both applications check the shared schema objects and initialize only when objects are missing; ordinary dashboard requests do not execute schema DDL. Use the initializer for an explicit, reproducible setup.
 
 ## Workflow and rules
 
@@ -98,12 +98,12 @@ Foreign keys restrict deletion of referenced records. To remove a whole chain, d
 - **Database:** four related tables, unique IDs, foreign keys, field checks, and triggers enforce rules across both interfaces. `learning_progress` is a SQL view derived from completed sessions; it does not duplicate progress records.
 - **Web:** PHP/PDO processes server-validated forms through prepared statements. POST/redirect/GET avoids accidental resubmission. Session CSRF tokens, escaped output, a restrictive content policy, and delete confirmation support safe local form handling. HTML, custom CSS and a small vanilla JavaScript file provide the UI.
 
-Initialization uses `CREATE ... IF NOT EXISTS`; it never drops tables, renumbers IDs, or inserts sample users. The original integrated source stored data only in memory and included no persisted records to migrate. Existing databases from this schema are retained. The initializer is **not a general migration tool** for unrelated or older table layouts. Back up a database before future schema changes; close both clients before copying `database/skill_exchange.db`. Local data, binaries, downloaded dependencies and secrets are ignored by Git.
+Initialization uses `CREATE ... IF NOT EXISTS`; it never drops tables, renumbers IDs, or inserts sample users. The reconstructed Phase 2 baseline stored data only in memory and included no persisted records to migrate. Existing databases from this schema are retained. The initializer is **not a general migration tool** for unrelated or older table layouts. Back up a database before future schema changes; close both clients before copying `database/skill_exchange.db`. Local data, binaries, downloaded dependencies and secrets are ignored by Git.
 
 ## Project structure
 
 ```text
-cpp/main.cpp                 Original four OOP modules and console menu, refactored
+cpp/main.cpp                 Reconstructed Phase 2 four OOP modules and console menu
 cpp/database.h               SQLite connection and prepared-statement helper
 database/schema.sql         Shared tables, constraints, indexes, triggers and view
 dashboard/index.php         Six dashboard page templates
@@ -128,4 +128,4 @@ python tests/integration.py --php 'C:\xampp\php\php.exe'
 
 The integration suite starts its own PHP server on an available loopback port and gives PHP and C++ one temporary database under `build/`. It checks both directions of integration, restart persistence, editing/deletion, progress, invalid inputs, relationship/status rules, duplicate feedback, escaping, CSRF and foreign-key integrity. It removes test data and rewrites `TEST_CASES.md` with actual results. It does not touch the normal database.
 
-Current executed result: **32 integration checks passed**, with warning-enabled C++ compilation and PHP syntax checks passing. Browser visual review, JavaScript confirmation interaction, and load testing have not been executed; see [TEST_CASES.md](TEST_CASES.md).
+See [TEST_CASES.md](TEST_CASES.md) for actual integration results. Browser visual review, JavaScript confirmation interaction, and load testing have not been executed; see [TEST_CASES.md](TEST_CASES.md).
