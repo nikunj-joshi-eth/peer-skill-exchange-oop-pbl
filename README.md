@@ -142,7 +142,7 @@ Read the [architecture](docs/ARCHITECTURE.md), [actual OOP concepts](docs/OOP_CO
 
 Current [limitations and future scope](docs/LIMITATIONS.md) include local access without roles, no overlap detection or timezone handling, unpaginated lists, snapshot refresh rather than live updates, and additive setup rather than database migrations. This finalization adds no authentication, external framework or unrelated feature.
 
-The official university DOCX report is deferred until its template is supplied. A GitHub release is deferred until the local Windows demonstration is confirmed. Capture real application screenshots during that demonstration; no fabricated screenshots are included.
+The mandatory university DOCX template has been supplied and a separate template-based report draft exists outside this source repository. Finalize it with actual screenshots and confirmed faculty details before submission. Release notes are in RELEASE_NOTES.md; complete the manual Windows demonstration and publish the verified release through GitHub. No fabricated screenshots are included.
 
 ## Troubleshooting
 
