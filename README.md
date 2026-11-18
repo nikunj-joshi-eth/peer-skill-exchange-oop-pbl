@@ -22,6 +22,31 @@ See [team responsibilities](docs/TEAM_CONTRIBUTIONS.md). These are assigned modu
 - Internet access for the first SQLite source download. The build pins SQLite **3.51.3** and compiles its official C amalgamation; no SQLite CLI, database server, or separately installed SQLite library is required.
 - Python 3 for the optional integration test suite (standard library only).
 
+## One shared database: recommended startup
+
+Both the C++ console and the PeerLearn web dashboard already use **the same SQLite database**; no second data store or API is needed. However, launching the console from a different working directory could previously select a different *relative* database file.
+
+For a reliable local demonstration, use the shared launcher from anywhere in Windows PowerShell (pass an absolute path if you are outside the repository):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start.ps1
+```
+
+It resolves the repository root and absolute database path, initializes the existing database without deleting records, sets `SKILL_EXCHANGE_DB` for PHP, passes the **same path** to the console, and starts the dashboard at `http://127.0.0.1:8080`. When the console exits with menu 0, the PHP server started by the launcher is also stopped. The compiled executable, PHP and extensions are prerequisites; build first with `scripts/build.ps1 -FetchSQLite`.
+
+Options:
+
+```powershell
+# Different port; still one shared database
+.\scripts\start.ps1 -Port 8081
+# A separate demonstration database (do not mix with your primary data)
+.\scripts\start.ps1 -DatabasePath 'database\viva-demo.db'
+# Custom PHP location
+.\scripts\start.ps1 -Php 'D:\tools\php\php.exe'
+```
+
+When starting the console and dashboard manually, launch the console **from the repository root** or pass an absolute database path to the executable and set `$env:SKILL_EXCHANGE_DB` to that identical path before starting PHP. The database file is local to the machine: moving to another laptop requires copying the `.db` file separately if existing records are needed. Do not copy a live database while either application is writing to it.
+
 ## Build and initialize (Windows PowerShell)
 
 Run these commands from the repository root:
@@ -111,6 +136,7 @@ dashboard/bootstrap.php     PDO, validation, form actions and rendering helpers
 dashboard/assets/style.css  Responsive dashboard styles
 dashboard/assets/app.js     Delete confirmation
 scripts/build.ps1           Pinned SQLite download and Windows build
+scripts/start.ps1           Launch C++ and PHP using one absolute SQLite database path
 scripts/init_db.php         Additive database initialization
 tests/integration.py        Isolated console / HTTP / SQLite integration suite
 docs/TEAM_CONTRIBUTIONS.md   Team responsibilities and module map
