@@ -100,4 +100,4 @@ All boxes below are intentionally unchecked. Capture real screenshots only after
 - [ ] Delete dialog Cancel leaves data unchanged; Confirm removes only the selected unreferenced record.
 - [ ] Restart persistence demonstrated on the local Windows machine.
 
-Record the date, browser/version, viewport and actual outcome when completing manual checks. Automated HTTP assertions are not evidence of rendered layout or assistive-technology behavior. Do not create a GitHub release until the local Windows demonstration has been confirmed. The final university DOCX report will use the official template when provided.
+Record the date, browser/version, viewport and actual outcome when completing manual checks. Automated HTTP assertions are not evidence of rendered layout or assistive-technology behavior. Do not create a GitHub release until the local Windows demonstration has been confirmed. The official report template has been supplied. The final DOCX is prepared separately and must be updated with genuine screenshots and final test evidence before submission.
