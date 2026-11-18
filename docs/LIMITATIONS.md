@@ -22,4 +22,4 @@ Subject to agreed requirements: pagination and query profiling, overlap checks w
 
 ## Submission evidence
 
-Use [TEST_CASES.md](../TEST_CASES.md) for actual integration results and the [demonstration guide](DEMONSTRATION_GUIDE.md) for screenshots and manual checks. No screenshots, browser passes, individual commit contributions, official university DOCX report or GitHub release are fabricated. The final university report awaits its official template; a release awaits confirmation of the local Windows demonstration.
+Use [TEST_CASES.md](../TEST_CASES.md) for actual integration results and the [demonstration guide](DEMONSTRATION_GUIDE.md) for screenshots and manual checks. No screenshots, browser passes, individual commit contributions, official university DOCX report or GitHub release are fabricated. The official university report template has been supplied. A template-based report draft is maintained separately from this source repository and requires real screenshots and final verification. See RELEASE_NOTES.md for the release checklist.
