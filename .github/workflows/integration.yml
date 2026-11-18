@@ -1,0 +1,43 @@
+name: C++ and PHP integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install PHP SQLite extensions and compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli php-sqlite3 php-mbstring build-essential python3 unzip curl
+      - name: Verify PHP extensions
+        run: |
+          php -v
+          php -m | grep -i -E '^PDO$|^pdo_sqlite$|^mbstring$'
+      - name: Fetch pinned SQLite amalgamation
+        run: |
+          mkdir -p dependencies build
+          curl --fail --location --retry 3 --output dependencies/sqlite.zip https://www.sqlite.org/2026/sqlite-amalgamation-3510300.zip
+          unzip -q dependencies/sqlite.zip -d dependencies
+          test -f dependencies/sqlite-amalgamation-3510300/sqlite3.c
+      - name: Compile C++ application
+        run: |
+          gcc -O2 -DSQLITE_THREADSAFE=0 -c dependencies/sqlite-amalgamation-3510300/sqlite3.c -o build/sqlite3.o
+          g++ -std=c++11 -Wall -Wextra -pedantic -I dependencies/sqlite-amalgamation-3510300 cpp/main.cpp build/sqlite3.o -o build/skill_exchange.exe -lm
+      - name: PHP lint
+        run: |
+          php -l dashboard/bootstrap.php
+          php -l dashboard/index.php
+          php -l scripts/init_db.php
+      - name: Integration suite (temporary database only)
+        run: python3 tests/integration.py --php php
